@@ -1,9 +1,15 @@
 use std::{error, fmt};
 
+type CallbackExecutionError =
+    hlua51::LuaFunctionCallError<hlua51::TuplePushError<hlua51::Void, hlua51::Void>>;
+
 #[derive(Debug)]
 pub enum Error {
     Lua(::hlua51::LuaError),
     Undefined(String),
+    SerializeResult(serde_json::Error, String),
+    SerializeBroadcast(serde_json::Error, String),
+    CallbackExecution(CallbackExecutionError),
 }
 
 impl fmt::Display for Error {
@@ -17,6 +23,10 @@ impl fmt::Display for Error {
                 "Error: Trying to access undefined lua global or table key: {}",
                 key
             )?,
+            SerializeResult(_, ref res) => write!(f, "Error serializing result: {}", res)?,
+            SerializeBroadcast(_, ref res) => {
+                write!(f, "Error serializing broadcast payload: {}", res)?
+            }
             _ => write!(f, "Error: {}", self.description())?,
         }
 
@@ -37,6 +47,9 @@ impl error::Error for Error {
         match *self {
             Lua(_) => "Lua error",
             Undefined(_) => "Trying to access lua gobal or table key that does not exist",
+            SerializeResult(_, _) => "Error serializing RPC result",
+            SerializeBroadcast(_, _) => "Error serializing broadcast payload",
+            CallbackExecution(_) => "Error executing RPC callback",
         }
     }
 
@@ -45,6 +58,8 @@ impl error::Error for Error {
 
         match *self {
             Lua(ref err) => Some(err),
+            SerializeResult(ref err, _) => Some(err),
+            SerializeBroadcast(ref err, _) => Some(err),
             _ => None,
         }
     }
@@ -53,5 +68,11 @@ impl error::Error for Error {
 impl From<::hlua51::LuaError> for Error {
     fn from(err: ::hlua51::LuaError) -> Self {
         Error::Lua(err)
+    }
+}
+
+impl From<CallbackExecutionError> for Error {
+    fn from(err: CallbackExecutionError) -> Self {
+        Error::CallbackExecution(err)
     }
 }

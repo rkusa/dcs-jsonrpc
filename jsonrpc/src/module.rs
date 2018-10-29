@@ -6,7 +6,7 @@ use serde_json::Value;
 static mut INITIALIZED: bool = false;
 static mut SERVER: Option<Server> = None;
 
-pub fn init(_lua: &mut Lua<'_>) -> Result<(), Error> {
+pub fn init(lua: &mut Lua<'_>) -> Result<(), Error> {
     unsafe {
         if INITIALIZED {
             return Ok(());
@@ -19,9 +19,14 @@ pub fn init(_lua: &mut Lua<'_>) -> Result<(), Error> {
     use log4rs::append::file::FileAppender;
     use log4rs::config::{Appender, Config, Logger, Root};
 
-    // let mut lfs: LuaTable<_> = get!(lua, "lfs")?;
-    // let mut writedir: LuaFunction<_> = get!(lfs, "writedir")?;
-    // let writedir: String = writedir.call()?;
+    #[cfg(not(test))]
+    let writedir = {
+        let mut lfs: LuaTable<_> = get!(lua, "lfs")?;
+        let mut writedir: LuaFunction<_> = get!(lfs, "writedir")?;
+        let writedir: String = writedir.call()?;
+        writedir
+    };
+    #[cfg(test)]
     let writedir = String::from("./");
     let log_file = writedir + "Logs/dcsjsonrpc.log";
 
@@ -63,20 +68,14 @@ pub fn try_next(lua: &mut Lua<'_>) -> Result<bool, Error> {
 
     if let Some(server) = unsafe { &SERVER } {
         if let Some(mut next) = server.try_next() {
-            // TODO: unwrap
-            let params = next
-                .req
-                .params
-                .take()
-                .map(|params| serde_json::to_string(&params).unwrap());
-            let mut result: LuaTable<_> = callback
-                .call_with_args((next.req.method.clone(), params))
-                .unwrap();
+            let params = next.req.params.take().map(|params| params.to_string());
+            let mut result: LuaTable<_> =
+                callback.call_with_args((next.req.method.clone(), params))?;
             if let Some(err) = result.get("error") {
                 next.error(err);
             } else if let Some(res) = result.get::<String, _, _>("result") {
-                // TODO: unwrap
-                let res: Value = serde_json::from_str(&res).unwrap();
+                let res: Value = serde_json::from_str(&res)
+                    .map_err(|err| Error::SerializeResult(err, res.to_string()))?;
                 next.success(res);
             }
 
@@ -90,8 +89,8 @@ pub fn try_next(lua: &mut Lua<'_>) -> Result<bool, Error> {
 pub fn broadcast(lua: &mut Lua<'_>) -> Result<(), Error> {
     let payload: String = pop!(lua, "payload")?;
     let channel: String = pop!(lua, "channel")?;
-    // TODO: unwrap
-    let payload: Option<Value> = serde_json::from_str(&payload).unwrap();
+    let payload: Option<Value> =
+        serde_json::from_str(&payload).map_err(|err| Error::SerializeBroadcast(err, payload))?;
 
     if let Some(server) = unsafe { &SERVER } {
         server.broadcast(&channel, payload);

@@ -17,7 +17,8 @@ fn test_integration() {
     thread::spawn(|| {
         let mut lua = Lua::new();
         lua.openlibs();
-        lua.execute::<()>(include_str!("./integration.lua")).unwrap();
+        lua.execute::<()>(include_str!("./integration.lua"))
+            .unwrap();
     });
 
     thread::sleep(Duration::from_millis(100));
@@ -39,8 +40,5 @@ fn test_integration() {
     rd.read_line(&mut line).unwrap();
     let json: Value = serde_json::from_str(&line).unwrap();
 
-    assert_eq!(
-        json,
-        json!({"jsonrpc":"2.0","result":"ok","id":1}),
-    );
+    assert_eq!(json, json!({"jsonrpc":"2.0","result":"ok","id":1}),);
 }

@@ -21,6 +21,7 @@ pub struct Request {
     pub jsonrpc: String,
     pub method: String,
     pub params: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<ID>,
 }
 
