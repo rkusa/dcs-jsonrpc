@@ -1,0 +1,7 @@
+.*
+!.gitignore
+!.rustfmt.toml
+/target
+**/*.rs.bk
+Cargo.lock
+Logs
