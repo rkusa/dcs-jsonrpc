@@ -11,7 +11,6 @@ Experimental
 
 **Upcoming Improvements:**
 - Resilient TCP connection (e.g. no automatic reconnects, yet)
-- Server lifecycle (e.g. gracefull shutdown when exiting mission)
 - Add more RPC methods
 
 Contributions are welcome, especially adding more RPC methods (they are added in [dcs-jsonrpc.lua](./dcs-jsonrpc.lua)).
