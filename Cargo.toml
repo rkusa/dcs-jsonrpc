@@ -1,4 +1,7 @@
 [workspace]
 members = [
+    "client",
+    "common",
+    "example",
     "jsonrpc",
 ]

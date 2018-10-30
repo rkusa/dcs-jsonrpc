@@ -1,8 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::{io, thread};
+use std::thread;
 
-use dcsjsonrpc_common::{Request, Response, RpcError};
+use dcsjsonrpc_common::{Notification, Request, Response, RpcError, Version};
 use futures::sync::mpsc::{channel, Sender};
 use futures::sync::oneshot;
 use serde_json::Value;
@@ -12,8 +12,6 @@ use tokio::prelude::*;
 
 type Queue = Arc<Mutex<VecDeque<PendingRequest>>>;
 type Subscriptions = Arc<Mutex<HashMap<String, Vec<Sender<Outgoing>>>>>;
-
-const JSONRPC_VERSION: &str = "2.0";
 
 pub struct Server {
     queue: Queue,
@@ -43,7 +41,7 @@ impl Server {
         thread::spawn(move || {
             tokio::run_async(
                 async move {
-                    let mut incoming = Incoming::new(listener, shutdown);
+                    let mut incoming = self::net::Incoming::new(listener, shutdown);
                     let clients: Arc<Mutex<HashMap<usize, TcpStream>>> =
                         Arc::new(Mutex::new(HashMap::new()));
                     let mut next_ix = 1;
@@ -107,11 +105,10 @@ impl Server {
     pub fn broadcast(&self, channel: &str, params: Option<Value>) {
         if let Some(ref mut clients) = self.subscriptions.lock().unwrap().get_mut(channel) {
             for tx in clients.iter_mut() {
-                if let Err(err) = tx.try_send(Outgoing::Request(Request {
-                    jsonrpc: JSONRPC_VERSION.to_string(),
+                if let Err(err) = tx.try_send(Outgoing::Notification(Notification {
+                    jsonrpc: Version::V2,
                     method: channel.to_string(),
                     params: params.clone(),
-                    id: None,
                 })) {
                     error!("Error broadcasting message: {}", err);
                 }
@@ -156,14 +153,8 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
             }
         };
 
-        let mut req = match serde_json::from_str::<Request>(&line) {
-            Ok(req) => {
-                if req.jsonrpc != JSONRPC_VERSION {
-                    warn!("ignoring non JSON-RPC v2 request ...");
-                    continue;
-                }
-                req
-            }
+        let mut req = match serde_json::from_str::<Incoming>(&line) {
+            Ok(req) => req,
             Err(err) => {
                 warn!("Err: {}", err);
                 warn!("ignoring invalid JSON-RPC v2 request ...");
@@ -178,23 +169,25 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
             name: String,
         }
 
-        match req.method.as_str() {
+        match req.method() {
             "subscribe" | "unsubscribe" => {
-                if let Some(params) = req.params.take() {
+                if let Some(params) = req.take_params() {
                     let params: SubParams = match serde_json::from_value(params) {
                         Ok(params) => params,
                         Err(err) => {
-                            error_response(
-                                &mut tx,
-                                &mut req,
-                                format!("Invalid subscribe/unsubscribe params: {}", err),
-                            );
+                            if let Incoming::Request(mut req) = req {
+                                error_response(
+                                    &mut tx,
+                                    &mut req,
+                                    format!("Invalid subscribe/unsubscribe params: {}", err),
+                                );
+                            }
                             continue;
                         }
                     };
 
                     let mut subs = subs.lock().unwrap();
-                    match req.method.as_str() {
+                    match req.method() {
                         "subscribe" => {
                             let subs = subs.entry(params.name).or_insert_with(Vec::new);
                             subs.push(tx.clone());
@@ -211,7 +204,9 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
                     };
                     req.success(json!("ok"));
                 } else {
-                    error_response(&mut tx, &mut req, "Params missing".to_string());
+                    if let Incoming::Request(mut req) = req {
+                        error_response(&mut tx, &mut req, "Params missing".to_string());
+                    }
                 }
             }
             _ => {
@@ -228,7 +223,7 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
 }
 
 pub struct PendingRequest {
-    pub req: Request,
+    pub req: Incoming,
     tx: Sender<Outgoing>,
 }
 
@@ -236,16 +231,47 @@ pub struct PendingRequest {
 #[serde(untagged)]
 pub enum Outgoing {
     Request(Request),
+    Notification(Notification),
     Response(Response),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum Incoming {
+    Request(Request),
+    Notification(Notification),
+}
+
+impl Incoming {
+    pub fn jsonrpc(&self) -> Version {
+        match *self {
+            Incoming::Request(ref req) => req.jsonrpc,
+            Incoming::Notification(ref req) => req.jsonrpc,
+        }
+    }
+
+    pub fn method(&self) -> &str {
+        match *self {
+            Incoming::Request(ref req) => &req.method,
+            Incoming::Notification(ref req) => &req.method,
+        }
+    }
+
+    pub fn take_params(&mut self) -> Option<Value> {
+        match *self {
+            Incoming::Request(ref mut req) => req.params.take(),
+            Incoming::Notification(ref mut req) => req.params.take(),
+        }
+    }
 }
 
 impl PendingRequest {
     pub fn success(&mut self, result: Value) {
-        if let Some(id) = self.req.id.take() {
+        if let Incoming::Request(ref mut req) = self.req {
             if let Err(err) = self.tx.try_send(Outgoing::Response(Response::Success {
-                jsonrpc: JSONRPC_VERSION.to_string(),
+                jsonrpc: Version::V2,
                 result,
-                id,
+                id: req.id.clone(),
             })) {
                 error!("Error sending response: {}", err);
             }
@@ -253,61 +279,67 @@ impl PendingRequest {
     }
 
     pub fn error(&mut self, error: String) {
-        error_response(&mut self.tx, &mut self.req, error);
+        if let Incoming::Request(ref mut req) = self.req {
+            error_response(&mut self.tx, req, error);
+        }
     }
 }
 
 fn error_response(tx: &mut Sender<Outgoing>, req: &mut Request, error: String) {
-    if let Some(id) = req.id.take() {
-        if let Err(err) = tx.try_send(Outgoing::Response(Response::Error {
-            jsonrpc: JSONRPC_VERSION.to_string(),
-            error: RpcError {
-                code: 1, // TODO: other codes?
-                message: error,
-                data: None, // TODO: provide data for some errors?
-            },
-            id,
-        })) {
-            error!("Error sending error response: {}", err);
-        }
-    } else {
-        warn!("Error for notification: {}", error);
+    if let Err(err) = tx.try_send(Outgoing::Response(Response::Error {
+        jsonrpc: Version::V2,
+        error: RpcError {
+            code: 1, // TODO: other codes?
+            message: error,
+            data: None, // TODO: provide data for some errors?
+        },
+        id: req.id.clone(),
+    })) {
+        error!("Error sending error response: {}", err);
     }
 }
 
-#[must_use = "streams do nothing unless polled"]
-#[derive(Debug)]
-pub struct Incoming {
-    inner: TcpListener,
-    shutdown: oneshot::Receiver<()>,
-}
+mod net {
+    use std::io;
 
-impl Incoming {
-    pub(crate) fn new(listener: TcpListener, shutdown: oneshot::Receiver<()>) -> Incoming {
-        Incoming {
-            inner: listener,
-            shutdown,
+    use futures::sync::oneshot;
+    use tokio::net::{TcpListener, TcpStream};
+    use tokio::prelude::*;
+
+    #[must_use = "streams do nothing unless polled"]
+    #[derive(Debug)]
+    pub struct Incoming {
+        inner: TcpListener,
+        shutdown: oneshot::Receiver<()>,
+    }
+
+    impl Incoming {
+        pub(crate) fn new(listener: TcpListener, shutdown: oneshot::Receiver<()>) -> Incoming {
+            Incoming {
+                inner: listener,
+                shutdown,
+            }
         }
     }
-}
 
-impl Stream for Incoming {
-    type Item = TcpStream;
-    type Error = io::Error;
+    impl Stream for Incoming {
+        type Item = TcpStream;
+        type Error = io::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
-        use futures::Async;
+        fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
+            use futures::Async;
 
-        if self.shutdown.poll() != Ok(Async::NotReady) {
-            return Ok(Async::Ready(None));
+            if self.shutdown.poll() != Ok(Async::NotReady) {
+                return Ok(Async::Ready(None));
+            }
+
+            let (socket, _) = match self.inner.poll_accept() {
+                Ok(Async::Ready(t)) => t,
+                Ok(Async::NotReady) => return Ok(Async::NotReady),
+                Err(e) => return Err(From::from(e)),
+            };
+
+            Ok(Async::Ready(Some(socket)))
         }
-
-        let (socket, _) = match self.inner.poll_accept() {
-            Ok(Async::Ready(t)) => t,
-            Ok(Async::NotReady) => return Ok(Async::NotReady),
-            Err(e) => return Err(From::from(e)),
-        };
-
-        Ok(Async::Ready(Some(socket)))
     }
 }

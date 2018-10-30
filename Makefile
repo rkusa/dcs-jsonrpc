@@ -7,3 +7,8 @@ test: build
 
 test_old: build
 	lua5.1 test.lua
+
+example:
+	cd example && cargo run
+
+.PHONY: example

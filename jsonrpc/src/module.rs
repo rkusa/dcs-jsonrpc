@@ -76,9 +76,9 @@ pub fn try_next(lua: &mut Lua<'_>) -> Result<bool, Error> {
 
     if let Some(server) = unsafe { &SERVER } {
         if let Some(mut next) = server.try_next() {
-            let params = next.req.params.take().map(|params| params.to_string());
+            let params = next.req.take_params().map(|params| params.to_string());
             let mut result: LuaTable<_> =
-                callback.call_with_args((next.req.method.clone(), params))?;
+                callback.call_with_args((next.req.method().clone(), params))?;
             if let Some(err) = result.get("error") {
                 next.error(err);
             } else if let Some(res) = result.get::<String, _, _>("result") {

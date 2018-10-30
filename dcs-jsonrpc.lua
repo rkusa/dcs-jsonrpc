@@ -16,17 +16,38 @@ jsonrpc.start()
 --
 
 function method_health()
-    return {
-        result = "\"ok\""
-    }
+    return success("ok")
 end
 
 function method_outText(params)
-    env.info("[JSON-RPC] 7")
     -- TODO: return error on missing params
     trigger.action.outText(params.text, params.displayTime, params.clearView)
 
     return nil
+end
+
+--
+-- RPC Group methods
+--
+
+function method_group_isExist(params)
+    -- TODO: return error on missing params
+    local group = Group.getByName(params.name)
+    if group == nil then
+        return success(false)
+    else
+        return success(group:isExist())
+    end
+end
+
+--
+-- Helper
+--
+
+function success(result)
+    return {
+        result = json:encode(result)
+    }
 end
 
 --
@@ -36,26 +57,19 @@ function handleRequest(method, params)
     env.info("[JSON-RPC] receiving method "..method.." with params: "..tostring(params))
 
     local fnName = "method_"..method
-    env.info("[JSON-RPC] 1")
     local fn = _G[fnName]
-    env.info("[JSON-RPC] 2")
     if params ~= nil then
-        env.info("[JSON-RPC] 3")
         params = json:decode(params)
     end
-    env.info("[JSON-RPC] 4")
 
     if type(fn) == "function" then
-        env.info("[JSON-RPC] 5")
         local ok, result = pcall(fn, params)
         if not ok then
-            env.info("[JSON-RPC] error executin "..method.." with params: "..tostring(params)..": "..tostring(result))
+            env.info("[JSON-RPC] error executing "..method.." with params: "..tostring(params)..": "..tostring(result))
         end
 
-        env.info("[JSON-RPC] 8")
         return result
     else
-        env.info("[JSON-RPC] 6")
         return {
             error = "unsupported method "..method
         }

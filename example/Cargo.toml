@@ -1,0 +1,8 @@
+[package]
+name = "example"
+version = "0.1.0"
+authors = ["Markus Ast <m@rkusa.st>"]
+edition = "2018"
+
+[dependencies]
+dcsjsonrpc-client = { path = "../client" }

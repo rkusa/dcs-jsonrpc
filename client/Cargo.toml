@@ -1,0 +1,12 @@
+[package]
+name = "dcsjsonrpc-client"
+version = "0.1.0"
+authors = ["Markus Ast <m@rkusa.st>"]
+edition = "2018"
+
+[dependencies]
+dcsjsonrpc-common = { path = "../common" }
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = " 1.0"
+
