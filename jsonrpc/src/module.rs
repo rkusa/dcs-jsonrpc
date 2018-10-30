@@ -16,30 +16,33 @@ pub fn init(lua: &mut Lua<'_>) -> Result<(), Error> {
 
     // init logging
     use log::LevelFilter;
+    use log4rs::append::console::ConsoleAppender;
     use log4rs::append::file::FileAppender;
     use log4rs::config::{Appender, Config, Logger, Root};
 
-    #[cfg(not(test))]
-    let writedir = {
-        let mut lfs: LuaTable<_> = get!(lua, "lfs")?;
+    let config = if let Some(mut lfs) = lua.get::<LuaTable<_>, _>("lfs") {
         let mut writedir: LuaFunction<_> = get!(lfs, "writedir")?;
         let writedir: String = writedir.call()?;
-        writedir
+        let log_file = writedir + "Logs/dcsjsonrpc.log";
+
+        let requests = FileAppender::builder()
+            .append(false)
+            .build(log_file)
+            .unwrap();
+
+        Config::builder()
+            .appender(Appender::builder().build("file", Box::new(requests)))
+            .logger(Logger::builder().build("dcsjsonrpc", LevelFilter::Debug))
+            .build(Root::builder().appender("file").build(LevelFilter::Off))
+            .unwrap()
+    } else {
+        let stdout = ConsoleAppender::builder().build();
+        Config::builder()
+            .appender(Appender::builder().build("stdout", Box::new(stdout)))
+            .logger(Logger::builder().build("dcsjsonrpc", LevelFilter::Debug))
+            .build(Root::builder().appender("stdout").build(LevelFilter::Off))
+            .unwrap()
     };
-    #[cfg(test)]
-    let writedir = String::from("./");
-    let log_file = writedir + "Logs/dcsjsonrpc.log";
-
-    let requests = FileAppender::builder()
-        .append(false)
-        .build(log_file)
-        .unwrap();
-
-    let config = Config::builder()
-        .appender(Appender::builder().build("file", Box::new(requests)))
-        .logger(Logger::builder().build("dcsjsonrpc", LevelFilter::Debug))
-        .build(Root::builder().appender("file").build(LevelFilter::Off))
-        .unwrap();
 
     log4rs::init_config(config).unwrap();
 
@@ -55,7 +58,7 @@ pub fn start(mut lua: &mut Lua<'_>) -> Result<(), Error> {
 
     info!("Starting ...");
 
-    let server = Server::new();
+    let server = Server::start()?;
     unsafe { SERVER = Some(server) }
 
     info!("Started ...");

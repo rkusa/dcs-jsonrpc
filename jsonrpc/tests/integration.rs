@@ -8,7 +8,7 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
-use dcsjsonrpc_common::{Request, ID};
+use dcsjsonrpc_common::{Request, Version, ID};
 use hlua51::Lua;
 use serde_json::Value;
 
@@ -28,10 +28,10 @@ fn test_integration() {
     let mut rd = BufReader::new(stream.try_clone().unwrap());
 
     let req = Request {
-        jsonrpc: "2.0".to_string(),
+        jsonrpc: Version::V2,
         method: "health".to_string(),
         params: None,
-        id: Some(ID::Number(1)),
+        id: ID::Number(1),
     };
     serde_json::to_writer(&stream, &req).unwrap();
     write!(stream, "\n");

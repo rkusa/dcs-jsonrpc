@@ -2,6 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::error::Error;
 use dcsjsonrpc_common::{Notification, Request, Response, RpcError, Version};
 use futures::sync::mpsc::{channel, Sender};
 use futures::sync::oneshot;
@@ -20,28 +21,23 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new() -> Self {
+    pub fn start() -> Result<Self, Error> {
         let (tx, rx) = oneshot::channel::<()>();
         let server = Server {
             queue: Arc::new(Mutex::new(VecDeque::new())),
             subscriptions: Arc::new(Mutex::new(HashMap::new())),
             shutdown: tx,
         };
-        server.start(rx);
-        server
-    }
 
-    fn start(&self, shutdown: oneshot::Receiver<()>) {
-        // Bind the server's socket.
         let addr = "127.0.0.1:7777".parse().unwrap();
-        let listener = TcpListener::bind(&addr).expect("unable to bind TCP listener");
+        let listener = TcpListener::bind(&addr)?;
 
-        let queue = self.queue.clone();
-        let subs = self.subscriptions.clone();
+        let queue = server.queue.clone();
+        let subs = server.subscriptions.clone();
         thread::spawn(move || {
             tokio::run_async(
                 async move {
-                    let mut incoming = self::net::Incoming::new(listener, shutdown);
+                    let mut incoming = self::net::Incoming::new(listener, rx);
                     let clients: Arc<Mutex<HashMap<usize, TcpStream>>> =
                         Arc::new(Mutex::new(HashMap::new()));
                     let mut next_ix = 1;
@@ -88,6 +84,8 @@ impl Server {
                 },
             );
         });
+
+        Ok(server)
     }
 
     pub fn stop(self) {
@@ -230,7 +228,6 @@ pub struct PendingRequest {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Outgoing {
-    Request(Request),
     Notification(Notification),
     Response(Response),
 }

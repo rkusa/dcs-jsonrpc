@@ -10,6 +10,7 @@ pub enum Error {
     SerializeResult(serde_json::Error, String),
     SerializeBroadcast(serde_json::Error, String),
     CallbackExecution(CallbackExecutionError),
+    Io(std::io::Error),
 }
 
 impl fmt::Display for Error {
@@ -50,6 +51,7 @@ impl error::Error for Error {
             SerializeResult(_, _) => "Error serializing RPC result",
             SerializeBroadcast(_, _) => "Error serializing broadcast payload",
             CallbackExecution(_) => "Error executing RPC callback",
+            Io(_) => "Error in TCP connection",
         }
     }
 
@@ -60,6 +62,7 @@ impl error::Error for Error {
             Lua(ref err) => Some(err),
             SerializeResult(ref err, _) => Some(err),
             SerializeBroadcast(ref err, _) => Some(err),
+            Io(ref err) => Some(err),
             _ => None,
         }
     }
@@ -74,5 +77,11 @@ impl From<::hlua51::LuaError> for Error {
 impl From<CallbackExecutionError> for Error {
     fn from(err: CallbackExecutionError) -> Self {
         Error::CallbackExecution(err)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::Io(err)
     }
 }
