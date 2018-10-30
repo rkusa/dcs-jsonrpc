@@ -101,15 +101,25 @@ impl Server {
     }
 
     pub fn broadcast(&self, channel: &str, params: Option<Value>) {
+        let forward = move |tx: &mut Sender<Outgoing>| {
+            if let Err(err) = tx.try_send(Outgoing::Notification(Notification {
+                jsonrpc: Version::V2,
+                method: channel.to_string(),
+                params: params.clone(),
+            })) {
+                error!("Error broadcasting message: {}", err);
+            }
+        };
+
         if let Some(ref mut clients) = self.subscriptions.lock().unwrap().get_mut(channel) {
             for tx in clients.iter_mut() {
-                if let Err(err) = tx.try_send(Outgoing::Notification(Notification {
-                    jsonrpc: Version::V2,
-                    method: channel.to_string(),
-                    params: params.clone(),
-                })) {
-                    error!("Error broadcasting message: {}", err);
-                }
+                forward(tx);
+            }
+        }
+
+        if let Some(ref mut clients) = self.subscriptions.lock().unwrap().get_mut("*") {
+            for tx in clients.iter_mut() {
+                forward(tx);
             }
         }
     }
@@ -169,7 +179,7 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
 
         match req.method() {
             "subscribe" | "unsubscribe" => {
-                if let Some(params) = req.take_params() {
+                let channel = if let Some(params) = req.take_params() {
                     let params: SubParams = match serde_json::from_value(params) {
                         Ok(params) => params,
                         Err(err) => {
@@ -183,27 +193,28 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
                             continue;
                         }
                     };
+                    params.name
+                } else {
+                    "*".to_string()
+                };
 
-                    let mut subs = subs.lock().unwrap();
-                    match req.method() {
-                        "subscribe" => {
-                            let subs = subs.entry(params.name).or_insert_with(Vec::new);
-                            subs.push(tx.clone());
-                        }
-                        "unsubscribe" => {
-                            subs.remove(&params.name);
-                        }
-                        _ => unreachable!(),
+                let mut subs = subs.lock().unwrap();
+                match req.method() {
+                    "subscribe" => {
+                        let subs = subs.entry(channel).or_insert_with(Vec::new);
+                        subs.push(tx.clone());
                     }
-
-                    let mut req = PendingRequest {
-                        req,
-                        tx: tx.clone(),
-                    };
-                    req.success(json!("ok"));
-                } else if let Incoming::Request(mut req) = req {
-                    error_response(&mut tx, &mut req, "Params missing".to_string());
+                    "unsubscribe" => {
+                        subs.remove(&channel);
+                    }
+                    _ => unreachable!(),
                 }
+
+                let mut req = PendingRequest {
+                    req,
+                    tx: tx.clone(),
+                };
+                req.success(json!("ok"));
             }
             _ => {
                 let mut queue = queue.lock().unwrap();

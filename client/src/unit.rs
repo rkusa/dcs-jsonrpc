@@ -1,17 +1,16 @@
 use std::fmt;
 
-use crate::error::Error;
 use crate::jsonrpc::Client;
 
 #[derive(Clone)]
-pub struct Group {
+pub struct Unit {
     client: Client,
     name: String,
 }
 
-impl Group {
+impl Unit {
     pub(crate) fn new<S: Into<String>>(client: Client, name: S) -> Self {
-        Group {
+        Unit {
             client,
             name: name.into(),
         }
@@ -20,22 +19,9 @@ impl Group {
     pub fn name(&self) -> &str {
         &self.name
     }
-
-    pub fn exists(&self) -> Result<bool, Error> {
-        #[derive(Serialize)]
-        struct Params<'a> {
-            name: &'a str,
-        }
-
-        let exists: bool = self
-            .client
-            .request("group_isExist", Some(Params { name: &self.name }))?;
-
-        Ok(exists)
-    }
 }
 
-impl fmt::Display for Group {
+impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }

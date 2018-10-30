@@ -9,5 +9,10 @@ fn main() -> Result<(), Error> {
         println!("Group {} does not exist", group1.name());
     }
 
+    println!("Listening to events:");
+    for event in client.events()? {
+        println!("{}", event);
+    }
+
     Ok(())
 }
