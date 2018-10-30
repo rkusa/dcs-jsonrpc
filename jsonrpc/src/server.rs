@@ -1,9 +1,10 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{io, thread};
 
 use dcsjsonrpc_common::{Request, Response, RpcError};
 use futures::sync::mpsc::{channel, Sender};
+use futures::sync::oneshot;
 use serde_json::Value;
 use tokio::codec::{Framed, LinesCodec};
 use tokio::net::{TcpListener, TcpStream};
@@ -17,19 +18,22 @@ const JSONRPC_VERSION: &str = "2.0";
 pub struct Server {
     queue: Queue,
     subscriptions: Subscriptions,
+    shutdown: oneshot::Sender<()>,
 }
 
 impl Server {
     pub fn new() -> Self {
+        let (tx, rx) = oneshot::channel::<()>();
         let server = Server {
             queue: Arc::new(Mutex::new(VecDeque::new())),
             subscriptions: Arc::new(Mutex::new(HashMap::new())),
+            shutdown: tx,
         };
-        server.start();
+        server.start(rx);
         server
     }
 
-    fn start(&self) {
+    fn start(&self, shutdown: oneshot::Receiver<()>) {
         // Bind the server's socket.
         let addr = "127.0.0.1:7777".parse().unwrap();
         let listener = TcpListener::bind(&addr).expect("unable to bind TCP listener");
@@ -39,7 +43,10 @@ impl Server {
         thread::spawn(move || {
             tokio::run_async(
                 async move {
-                    let mut incoming = listener.incoming();
+                    let mut incoming = Incoming::new(listener, shutdown);
+                    let clients: Arc<Mutex<HashMap<usize, TcpStream>>> =
+                        Arc::new(Mutex::new(HashMap::new()));
+                    let mut next_ix = 1;
 
                     while let Some(stream) = await!(incoming.next()) {
                         let stream = match stream {
@@ -49,11 +56,44 @@ impl Server {
                                 continue;
                             }
                         };
-                        handle(stream, queue.clone(), subs.clone());
+
+                        let handle = match stream.try_clone() {
+                            Ok(stream) => stream,
+                            Err(_) => continue,
+                        };
+
+                        let ix = next_ix;
+                        next_ix += 1;
+                        clients.lock().unwrap().insert(ix, handle);
+
+                        {
+                            let clients = clients.clone();
+                            let queue = queue.clone();
+                            let subs = subs.clone();
+                            tokio::spawn_async(
+                                async move {
+                                    await!(handle_client(stream, queue, subs));
+
+                                    clients.lock().unwrap().remove(&ix);
+                                },
+                            );
+                        }
                     }
+
+                    for (_, client) in clients.lock().unwrap().iter() {
+                        if let Err(err) = client.shutdown(std::net::Shutdown::Both) {
+                            error!("Error shutding down client connection: {}", err);
+                        }
+                    }
+
+                    info!("TPC server shut down");
                 },
             );
         });
+    }
+
+    pub fn stop(self) {
+        self.shutdown.send(()).unwrap();
     }
 
     pub fn try_next(&self) -> Option<PendingRequest> {
@@ -80,113 +120,111 @@ impl Server {
     }
 }
 
-fn handle(stream: TcpStream, queue: Queue, subs: Subscriptions) {
+async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
+    debug!("Client connected ...");
+
+    let framed = Framed::new(stream, LinesCodec::new());
+    let (mut sink, mut stream) = framed.split();
+
+    let (mut tx, mut rx) = channel::<Outgoing>(128);
     tokio::spawn_async(
         async move {
-            debug!("Client connected ...");
+            while let Some(res) = await!(rx.next()) {
+                // receive stream has error type (), ie, it will not throw an error ever,
+                // thus unwrap is fine
+                let res = res.unwrap();
 
-            let framed = Framed::new(stream, LinesCodec::new());
-            let (mut sink, mut stream) = framed.split();
-
-            let (mut tx, mut rx) = channel::<Outgoing>(128);
-            tokio::spawn_async(
-                async move {
-                    while let Some(res) = await!(rx.next()) {
-                        // receive stream has error type (), ie, it will not throw an error ever,
-                        // thus unwrap is fine
-                        let res = res.unwrap();
-
-                        debug!("Responding with: {:?}", res);
-                        match serde_json::to_string(&res) {
-                            Ok(res) => {
-                                await!(sink.send_async(res));
-                            }
-                            Err(err) => {
-                                error!("Error serializing outgoing message: {}", err);
-                            }
-                        }
-                    }
-                },
-            );
-
-            while let Some(line) = await!(stream.next()) {
-                let line = match line {
-                    Ok(line) => line,
-                    Err(err) => {
-                        error!("Error reading next line from client: {}", err);
-                        break;
-                    }
-                };
-
-                let mut req = match serde_json::from_str::<Request>(&line) {
-                    Ok(req) => {
-                        if req.jsonrpc != JSONRPC_VERSION {
-                            warn!("ignoring non JSON-RPC v2 request ...");
-                            continue;
-                        }
-                        req
+                debug!("Responding with: {:?}", res);
+                match serde_json::to_string(&res) {
+                    Ok(res) => {
+                        await!(sink.send_async(res));
                     }
                     Err(err) => {
-                        warn!("Err: {}", err);
-                        warn!("ignoring invalid JSON-RPC v2 request ...");
-                        continue;
-                    }
-                };
-
-                debug!("Recv: {:?}", req);
-
-                #[derive(Deserialize)]
-                struct SubParams {
-                    name: String,
-                }
-
-                match req.method.as_str() {
-                    "subscribe" | "unsubscribe" => {
-                        if let Some(params) = req.params.take() {
-                            let params: SubParams = match serde_json::from_value(params) {
-                                Ok(params) => params,
-                                Err(err) => {
-                                    error_response(
-                                        &mut tx,
-                                        &mut req,
-                                        format!("Invalid subscribe/unsubscribe params: {}", err),
-                                    );
-                                    continue;
-                                }
-                            };
-
-                            let mut subs = subs.lock().unwrap();
-                            match req.method.as_str() {
-                                "subscribe" => {
-                                    let subs = subs.entry(params.name).or_insert_with(Vec::new);
-                                    subs.push(tx.clone());
-                                }
-                                "unsubscribe" => {
-                                    subs.remove(&params.name);
-                                }
-                                _ => unreachable!(),
-                            }
-
-                            let mut req = PendingRequest {
-                                req,
-                                tx: tx.clone(),
-                            };
-                            req.success(json!("ok"));
-                        } else {
-                            error_response(&mut tx, &mut req, "Params missing".to_string());
-                        }
-                    }
-                    _ => {
-                        let mut queue = queue.lock().unwrap();
-                        queue.push_back(PendingRequest {
-                            req,
-                            tx: tx.clone(),
-                        });
+                        error!("Error serializing outgoing message: {}", err);
                     }
                 }
             }
         },
     );
+
+    while let Some(line) = await!(stream.next()) {
+        let line = match line {
+            Ok(line) => line,
+            Err(err) => {
+                error!("Error reading next line from client: {}", err);
+                break;
+            }
+        };
+
+        let mut req = match serde_json::from_str::<Request>(&line) {
+            Ok(req) => {
+                if req.jsonrpc != JSONRPC_VERSION {
+                    warn!("ignoring non JSON-RPC v2 request ...");
+                    continue;
+                }
+                req
+            }
+            Err(err) => {
+                warn!("Err: {}", err);
+                warn!("ignoring invalid JSON-RPC v2 request ...");
+                continue;
+            }
+        };
+
+        debug!("Recv: {:?}", req);
+
+        #[derive(Deserialize)]
+        struct SubParams {
+            name: String,
+        }
+
+        match req.method.as_str() {
+            "subscribe" | "unsubscribe" => {
+                if let Some(params) = req.params.take() {
+                    let params: SubParams = match serde_json::from_value(params) {
+                        Ok(params) => params,
+                        Err(err) => {
+                            error_response(
+                                &mut tx,
+                                &mut req,
+                                format!("Invalid subscribe/unsubscribe params: {}", err),
+                            );
+                            continue;
+                        }
+                    };
+
+                    let mut subs = subs.lock().unwrap();
+                    match req.method.as_str() {
+                        "subscribe" => {
+                            let subs = subs.entry(params.name).or_insert_with(Vec::new);
+                            subs.push(tx.clone());
+                        }
+                        "unsubscribe" => {
+                            subs.remove(&params.name);
+                        }
+                        _ => unreachable!(),
+                    }
+
+                    let mut req = PendingRequest {
+                        req,
+                        tx: tx.clone(),
+                    };
+                    req.success(json!("ok"));
+                } else {
+                    error_response(&mut tx, &mut req, "Params missing".to_string());
+                }
+            }
+            _ => {
+                let mut queue = queue.lock().unwrap();
+                queue.push_back(PendingRequest {
+                    req,
+                    tx: tx.clone(),
+                });
+            }
+        }
+    }
+
+    debug!("Client connection closed ...");
 }
 
 pub struct PendingRequest {
@@ -234,5 +272,42 @@ fn error_response(tx: &mut Sender<Outgoing>, req: &mut Request, error: String) {
         }
     } else {
         warn!("Error for notification: {}", error);
+    }
+}
+
+#[must_use = "streams do nothing unless polled"]
+#[derive(Debug)]
+pub struct Incoming {
+    inner: TcpListener,
+    shutdown: oneshot::Receiver<()>,
+}
+
+impl Incoming {
+    pub(crate) fn new(listener: TcpListener, shutdown: oneshot::Receiver<()>) -> Incoming {
+        Incoming {
+            inner: listener,
+            shutdown,
+        }
+    }
+}
+
+impl Stream for Incoming {
+    type Item = TcpStream;
+    type Error = io::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
+        use futures::Async;
+
+        if self.shutdown.poll() != Ok(Async::NotReady) {
+            return Ok(Async::Ready(None));
+        }
+
+        let (socket, _) = match self.inner.poll_accept() {
+            Ok(Async::Ready(t)) => t,
+            Ok(Async::NotReady) => return Ok(Async::NotReady),
+            Err(e) => return Err(From::from(e)),
+        };
+
+        Ok(Async::Ready(Some(socket)))
     }
 }

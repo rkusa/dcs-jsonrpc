@@ -63,6 +63,14 @@ pub fn start(mut lua: &mut Lua<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn stop() {
+    info!("Stopping ...");
+
+    if let Some(server) = unsafe { SERVER.take() } {
+        server.stop();
+    }
+}
+
 pub fn try_next(lua: &mut Lua<'_>) -> Result<bool, Error> {
     let mut callback: LuaFunction<_> = pop!(lua, "callback")?;
 

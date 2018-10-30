@@ -84,6 +84,13 @@ function eventHandler:onEvent(event)
             initiator = event.initiator:getName(),
             weapon = event.weapon:getName(),
         }))
+
+    elseif event.id == world.event.S_EVENT_MISSION_END then
+        jsonrpc.broadcast("mission_end", json:encode({
+            time = event.time,
+        }))
+        jsonrpc.stop()
+
     elseif event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
         jsonrpc.broadcast("player_enter_unit", json:encode({
             time = event.time,

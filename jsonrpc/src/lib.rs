@@ -36,6 +36,13 @@ pub extern "C" fn start(state: *mut ffi::lua_State) -> c_int {
 }
 
 #[no_mangle]
+pub extern "C" fn stop(_state: *mut ffi::lua_State) -> c_int {
+    module::stop();
+
+    0
+}
+
+#[no_mangle]
 pub extern "C" fn try_next(state: *mut ffi::lua_State) -> c_int {
     let mut lua = unsafe { Lua::from_existing_state(state, false) };
     match module::try_next(&mut lua) {
@@ -75,6 +82,10 @@ pub unsafe extern "C" fn luaopen_dcsjsonrpc(state: *mut ffi::lua_State) -> c_int
         ffi::luaL_Reg {
             name: cstr!("start"),
             func: Some(start),
+        },
+        ffi::luaL_Reg {
+            name: cstr!("stop"),
+            func: Some(stop),
         },
         ffi::luaL_Reg {
             name: cstr!("next"),
