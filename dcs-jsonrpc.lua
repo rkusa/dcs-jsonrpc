@@ -78,8 +78,15 @@ end, nil, timer.getTime() + .1)
 --
 local eventHandler = {}
 function eventHandler:onEvent(event)
-    if event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
+    if event.id == world.event.S_EVENT_SHOT then
+        jsonrpc.broadcast("shot", json:encode({
+            time = event.time,
+            initiator = event.initiator:getName(),
+            weapon = event.weapon:getName(),
+        }))
+    elseif event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
         jsonrpc.broadcast("player_enter_unit", json:encode({
+            time = event.time,
             initiator = event.initiator:getName(),
         }))
     end

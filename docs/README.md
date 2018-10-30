@@ -19,11 +19,21 @@ Subscribe to events by calling the `subscribe` method and providing the event na
 >> {"jsonrpc":"2.0","method":"subscribe","params":{"name":"player_enter_unit"},"id":2}
 ```
 
-### `player_enter_unit`
+### [`shot`](https://wiki.hoggitworld.com/view/DCS_event_shot)
+
+Occurs whenever any unit in a mission fires a weapon. But not any machine gun or autocannon based weapon, those are handled by shooting_start.
+
+**Params:**
+- *time* - the event's mission time
+- *initiator* - The name of the unit that fired the weapon
+- *weapon* - The name of the weapon that has been fired
+
+### [`player_enter_unit`](https://wiki.hoggitworld.com/view/DCS_event_player_enter_unit)
 
 Occurs when any player assumes direct control of a unit.
 
 **Params:**
+- *time* - the event's mission time
 - *initiator* - The name of the unit that is being taken control of
 
 
