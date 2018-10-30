@@ -201,10 +201,8 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
                         tx: tx.clone(),
                     };
                     req.success(json!("ok"));
-                } else {
-                    if let Incoming::Request(mut req) = req {
-                        error_response(&mut tx, &mut req, "Params missing".to_string());
-                    }
+                } else if let Incoming::Request(mut req) = req {
+                    error_response(&mut tx, &mut req, "Params missing".to_string());
                 }
             }
             _ => {
@@ -333,7 +331,7 @@ mod net {
             let (socket, _) = match self.inner.poll_accept() {
                 Ok(Async::Ready(t)) => t,
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
-                Err(e) => return Err(From::from(e)),
+                Err(e) => return Err(e),
             };
 
             Ok(Async::Ready(Some(socket)))
