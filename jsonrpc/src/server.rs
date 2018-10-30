@@ -42,8 +42,13 @@ impl Server {
                     let mut incoming = listener.incoming();
 
                     while let Some(stream) = await!(incoming.next()) {
-                        // TODO: unwrap
-                        let stream = stream.unwrap();
+                        let stream = match stream {
+                            Ok(stream) => stream,
+                            Err(err) => {
+                                error!("Error establishing connection: {}", err);
+                                continue;
+                            }
+                        };
                         handle(stream, queue.clone(), subs.clone());
                     }
                 },
@@ -62,14 +67,14 @@ impl Server {
     pub fn broadcast(&self, channel: &str, params: Option<Value>) {
         if let Some(ref mut clients) = self.subscriptions.lock().unwrap().get_mut(channel) {
             for tx in clients.iter_mut() {
-                // TODO: unwrap
-                tx.try_send(Outgoing::Request(Request {
+                if let Err(err) = tx.try_send(Outgoing::Request(Request {
                     jsonrpc: JSONRPC_VERSION.to_string(),
                     method: channel.to_string(),
                     params: params.clone(),
                     id: None,
-                }))
-                .unwrap();
+                })) {
+                    error!("Error broadcasting message: {}", err);
+                }
             }
         }
     }
@@ -83,23 +88,36 @@ fn handle(stream: TcpStream, queue: Queue, subs: Subscriptions) {
             let framed = Framed::new(stream, LinesCodec::new());
             let (mut sink, mut stream) = framed.split();
 
-            let (tx, mut rx) = channel::<Outgoing>(128);
+            let (mut tx, mut rx) = channel::<Outgoing>(128);
             tokio::spawn_async(
                 async move {
-                    // TODO: unwrap
                     while let Some(res) = await!(rx.next()) {
-                        // TODO: unwrap?
+                        // receive stream has error type (), ie, it will not throw an error ever,
+                        // thus unwrap is fine
                         let res = res.unwrap();
+
                         debug!("Responding with: {:?}", res);
-                        let res = serde_json::to_string(&res).unwrap();
-                        await!(sink.send_async(res));
+                        match serde_json::to_string(&res) {
+                            Ok(res) => {
+                                await!(sink.send_async(res));
+                            }
+                            Err(err) => {
+                                error!("Error serializing outgoing message: {}", err);
+                            }
+                        }
                     }
                 },
             );
 
             while let Some(line) = await!(stream.next()) {
-                // TODO: unwrap
-                let line = line.unwrap();
+                let line = match line {
+                    Ok(line) => line,
+                    Err(err) => {
+                        error!("Error reading next line from client: {}", err);
+                        break;
+                    }
+                };
+
                 let mut req = match serde_json::from_str::<Request>(&line) {
                     Ok(req) => {
                         if req.jsonrpc != JSONRPC_VERSION {
@@ -125,8 +143,17 @@ fn handle(stream: TcpStream, queue: Queue, subs: Subscriptions) {
                 match req.method.as_str() {
                     "subscribe" | "unsubscribe" => {
                         if let Some(params) = req.params.take() {
-                            // TODO: unwrap
-                            let params: SubParams = serde_json::from_value(params).unwrap();
+                            let params: SubParams = match serde_json::from_value(params) {
+                                Ok(params) => params,
+                                Err(err) => {
+                                    error_response(
+                                        &mut tx,
+                                        &mut req,
+                                        format!("Invalid subscribe/unsubscribe params: {}", err),
+                                    );
+                                    continue;
+                                }
+                            };
 
                             let mut subs = subs.lock().unwrap();
                             match req.method.as_str() {
@@ -146,7 +173,7 @@ fn handle(stream: TcpStream, queue: Queue, subs: Subscriptions) {
                             };
                             req.success(json!("ok"));
                         } else {
-                            // TODO: error
+                            error_response(&mut tx, &mut req, "Params missing".to_string());
                         }
                     }
                     _ => {
@@ -177,32 +204,35 @@ pub enum Outgoing {
 impl PendingRequest {
     pub fn success(&mut self, result: Value) {
         if let Some(id) = self.req.id.take() {
-            // TODO: unwrap
-            self.tx
-                .try_send(Outgoing::Response(Response::Success {
-                    jsonrpc: JSONRPC_VERSION.to_string(),
-                    result,
-                    id,
-                }))
-                .unwrap();
+            if let Err(err) = self.tx.try_send(Outgoing::Response(Response::Success {
+                jsonrpc: JSONRPC_VERSION.to_string(),
+                result,
+                id,
+            })) {
+                error!("Error sending response: {}", err);
+            }
         }
     }
 
     pub fn error(&mut self, error: String) {
-        error!("Error Response: {} for {:?}", error, self.req);
-        if let Some(id) = self.req.id.take() {
-            // TODO: unwrap
-            self.tx
-                .try_send(Outgoing::Response(Response::Error {
-                    jsonrpc: JSONRPC_VERSION.to_string(),
-                    error: RpcError {
-                        code: 1, // TODO: other codes?
-                        message: error,
-                        data: None, // TODO: provide data for some errors?
-                    },
-                    id,
-                }))
-                .unwrap();
+        error_response(&mut self.tx, &mut self.req, error);
+    }
+}
+
+fn error_response(tx: &mut Sender<Outgoing>, req: &mut Request, error: String) {
+    if let Some(id) = req.id.take() {
+        if let Err(err) = tx.try_send(Outgoing::Response(Response::Error {
+            jsonrpc: JSONRPC_VERSION.to_string(),
+            error: RpcError {
+                code: 1, // TODO: other codes?
+                message: error,
+                data: None, // TODO: provide data for some errors?
+            },
+            id,
+        })) {
+            error!("Error sending error response: {}", err);
         }
+    } else {
+        warn!("Error for notification: {}", error);
     }
 }

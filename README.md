@@ -11,7 +11,6 @@ Experimental
 
 **Upcoming Improvements:**
 - Resilient TCP connection (e.g. no automatic reconnects, yet)
-- Resilient JSON-RPC module (some error cases still have the potential to crash DCS)
 - Server lifecycle (e.g. gracefull shutdown when exiting mission)
 - Add more RPC methods
 
