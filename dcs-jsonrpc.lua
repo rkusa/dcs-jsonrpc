@@ -72,6 +72,35 @@ function method_groupExists(params)
     end
 end
 
+function method_getGroupData(params)
+    -- TODO: return error on missing params
+    local group = Group.getByName(params.name)
+    if group == nil then
+        return success(nil)
+    end
+
+    local countries = {}
+    if group:getCoalition() == coalition.side.RED then
+        countries = env.mission.coalition.red.country
+    else
+        countries = env.mission.coalition.blue.country
+    end
+
+    local country = group:getUnit(1):getCountry()
+    local id = group:getID()
+    for _, countryData in pairs(countries) do
+        if type(countryData) == 'table' and type(countryData.plane) == 'table' and type(countryData.plane.group) == 'table' then
+            for _, groupData in pairs(countryData.plane.group) do
+                if groupData.groupId == id then
+                    return success(groupData)
+                end
+            end
+        end
+    end
+
+    return success(nil)
+end
+
 --
 -- Helper
 --
