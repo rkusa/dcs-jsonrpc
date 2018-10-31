@@ -2,18 +2,27 @@
 
 A JSON-RPC server that runs inside the DCS World mission environment and exposes mission scripting through an [JSON-API 2.0](https://www.jsonrpc.org/specification) over non-blocking TCP.
 
+[Documentation](./docs)
+
+---
+
 **Goals:**
 - [JSON-API 2.0](https://www.jsonrpc.org/specification) server to enable non-language specific DCS mission scripting
 - Non-blocking TCP server (Lua sockets are blocking, thus implement a custom lua module that is non-blocking)
-
-**Status:**
-Experimental
 
 **Upcoming Improvements:**
 - Resilient TCP connection (e.g. no automatic reconnects, yet)
 - Add more RPC methods
 
 Contributions are welcome, especially adding more RPC methods (they are added in [dcs-jsonrpc.lua](./dcs-jsonrpc.lua)).
+
+## Sub-Projects
+
+- [**client**](./client) - this is a Rust client that wrappes the JSON-RPC calls into a easy to use API
+- [**example**](./example) - this is a simple example of how to use the Rust-based client
+- [**common**](./common) - this crate includes some structs that are shared between the different sub-projects
+- [**jsonrpc**](./jsonrpc) - this is a Lua module that runs the JSON-RPC server inside the DCS World mission environment  
+- [**repl**](./repl) - this is a simple REPL that can be used to execute Lua in a running DCS Word mission (meant for debugging)
 
 ## Installation
 
@@ -62,6 +71,3 @@ nc 127.0.0.1 7777
 << {"jsonrpc":"2.0","method":"player_enter_unit","params":{"initiator":"Pilot #002"}}
 ```
 
-## Documentation
-
-[Documentation](./docs)

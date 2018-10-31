@@ -1,4 +1,4 @@
-# Documentation
+# DCS JSON-RPC
 
 ## Methods
 
