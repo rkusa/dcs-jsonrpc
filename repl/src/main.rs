@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead};
 
 use dcsjsonrpc_client::{Client, Error};
 use serde_json::Value;
@@ -18,8 +18,12 @@ fn main() -> Result<(), Error> {
                 }
                 Err(err) => return Err(err),
             };
-            let json = serde_json::to_string_pretty(&result)?;
-            println!("= {}", json);
+            if let Some(s) = result.as_str() {
+                println!("= {}", s);
+            } else {
+                let json = serde_json::to_string_pretty(&result)?;
+                println!("= {}", json);
+            }
         }
     }
 }

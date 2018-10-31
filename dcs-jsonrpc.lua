@@ -25,7 +25,11 @@ function method_execute(params)
     if fn then
         local ok, result = pcall(fn)
         if ok then
-            return success(json:encode(result))
+            if type(result) == "string" then
+                return success(result)
+            else
+                return success(json:encode(result))
+            end
         else
             return error("Error executing Lua code: "..result)
         end
