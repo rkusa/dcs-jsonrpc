@@ -11,7 +11,7 @@ Displays the passed string of text for the specified time to all players.
 - *displayTime* (number) - the amount of seconds the message should be displayed
 - *clearView* (boolean) - defines whether or not to use the old message display format
 
-### [`group_isExist`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
 
 Return a boolean value based on whether the group currently exists in the mission.
 

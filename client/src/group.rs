@@ -29,7 +29,7 @@ impl Group {
 
         let exists: bool = self
             .client
-            .request("group_isExist", Some(Params { name: &self.name }))?;
+            .request("groupExists", Some(Params { name: &self.name }))?;
 
         Ok(exists)
     }

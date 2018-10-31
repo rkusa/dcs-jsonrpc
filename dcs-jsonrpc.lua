@@ -30,7 +30,7 @@ end
 -- RPC Group methods
 --
 
-function method_group_isExist(params)
+function method_groupExists(params)
     -- TODO: return error on missing params
     local group = Group.getByName(params.name)
     if group == nil then
