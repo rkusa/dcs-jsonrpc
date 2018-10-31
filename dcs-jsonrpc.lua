@@ -53,6 +53,15 @@ end
 -- RPC Group methods
 --
 
+function method_getGroups(params)
+    -- TODO: return error on missing params
+    local names = {}
+    for i, group in pairs(coalition.getGroups(params.coalition, params.category)) do
+        names[i] = group:getName()
+    end
+    return success(names)
+end
+
 function method_groupExists(params)
     -- TODO: return error on missing params
     local group = Group.getByName(params.name)

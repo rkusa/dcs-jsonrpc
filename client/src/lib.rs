@@ -3,6 +3,9 @@
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+mod macros;
+mod coalition;
 mod error;
 mod event;
 mod group;
@@ -13,10 +16,11 @@ mod weapon;
 use std::net::ToSocketAddrs;
 use std::sync::mpsc::{channel, Receiver};
 
+pub use self::coalition::Coalition;
 pub use self::error::Error;
 pub use self::event::Event;
 use self::event::RawEvent;
-pub use self::group::Group;
+pub use self::group::*;
 pub use self::unit::Unit;
 pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;
@@ -34,6 +38,32 @@ impl Client {
 
     pub fn group(&self, name: &str) -> Group {
         Group::new(self.client.clone(), name)
+    }
+
+    pub fn groups(
+        &self,
+        coalition: Coalition,
+        category: Option<GroupCategory>,
+    ) -> Result<GroupIterator, Error> {
+        #[derive(Serialize)]
+        struct Params {
+            coalition: Coalition,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            category: Option<GroupCategory>,
+        }
+
+        let group_names: Vec<String> = self.client.request(
+            "getGroups",
+            Some(Params {
+                coalition,
+                category,
+            }),
+        )?;
+
+        Ok(GroupIterator {
+            client: self.client.clone(),
+            group_names,
+        })
     }
 
     pub fn events(&self) -> Result<EventsIterator, Error> {

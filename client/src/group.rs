@@ -9,6 +9,14 @@ pub struct Group {
     name: String,
 }
 
+enum_number!(GroupCategory {
+    Airplane = 0,
+    Helicopter = 1,
+    Ground = 2,
+    Ship = 3,
+    Train = 4,
+});
+
 impl Group {
     pub(crate) fn new<S: Into<String>>(client: Client, name: S) -> Self {
         Group {
@@ -32,6 +40,21 @@ impl Group {
             .request("groupExists", Some(Params { name: &self.name }))?;
 
         Ok(exists)
+    }
+}
+
+pub struct GroupIterator {
+    pub(crate) client: Client,
+    pub(crate) group_names: Vec<String>,
+}
+
+impl Iterator for GroupIterator {
+    type Item = Group;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.group_names
+            .pop()
+            .map(|name| Group::new(self.client.clone(), name))
     }
 }
 

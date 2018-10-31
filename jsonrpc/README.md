@@ -25,6 +25,14 @@ Execute a given Lua code.
 << {"jsonrpc":"2.0","result":"42","id":1}
 ```
 
+### [`getGroups`](https://wiki.hoggitworld.com/view/DCS_func_getGroups)
+
+Get a list of all group names of the given coalition and category.
+
+**Params:**
+- *coalition* (u8) - the coalition
+- [*category*] (u8) - the group category
+
 ### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
 
 Return a boolean value based on whether the group currently exists in the mission.
