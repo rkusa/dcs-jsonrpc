@@ -19,6 +19,25 @@ function method_health()
     return success("ok")
 end
 
+function method_execute(params)
+    -- TODO: return error on missing params
+    local fn, err = loadstring(params.lua)
+    if fn then
+        local ok, result = pcall(fn)
+        if ok then
+            return success(json:encode(result))
+        else
+            return error("Error executing Lua code: "..result)
+        end
+    else
+        return error("Error loading Lua code: "..err)
+    end
+end
+
+--
+-- RPC trigger actions
+--
+
 function method_outText(params)
     -- TODO: return error on missing params
     trigger.action.outText(params.text, params.displayTime, params.clearView)
@@ -47,6 +66,12 @@ end
 function success(result)
     return {
         result = json:encode(result)
+    }
+end
+
+function error(msg)
+    return {
+        error = msg
     }
 end
 

@@ -47,6 +47,18 @@ impl Client {
             rx,
         })
     }
+
+    pub fn execute<R>(&self, lua: &str) -> Result<R, Error>
+    where
+        for<'de> R: serde::Deserialize<'de>,
+    {
+        #[derive(Serialize)]
+        struct Params<'a> {
+            lua: &'a str,
+        }
+
+        self.client.request("execute", Some(Params { lua }))
+    }
 }
 
 pub struct EventsIterator {

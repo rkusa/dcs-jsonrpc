@@ -11,6 +11,20 @@ Displays the passed string of text for the specified time to all players.
 - *displayTime* (number) - the amount of seconds the message should be displayed
 - *clearView* (boolean) - defines whether or not to use the old message display format
 
+### `execute`
+
+Execute a given Lua code.
+
+**Params:**
+- *lua* (string) - the Lua code that should be executed
+
+**Example:**
+
+```json
+>> {"jsonrpc":"2.0","method":"execute","params":{"lua":"return 40 + 2"},"id":1}
+<< {"jsonrpc":"2.0","result":"42","id":1}
+```
+
 ### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
 
 Return a boolean value based on whether the group currently exists in the mission.
