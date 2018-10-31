@@ -78,10 +78,10 @@ pub struct GroupIterator {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GroupData {
+    #[serde(rename = "groupId")]
+    pub id: u64,
     pub communication: bool,
     pub frequency: u16,
-    #[serde(rename = "groupId")]
-    pub group_id: u64,
     pub hidden: bool,
     pub modulation: i64,
     pub name: String,
@@ -89,10 +89,10 @@ pub struct GroupData {
     pub radio_set: bool,
     pub route: RouteData,
     pub start_time: u64,
-    pub task: String, // TODO: enum
+    pub task: Task,
     pub tasks: Value, // TODO
     pub uncontrolled: bool,
-    pub units: Vec<UnitData>, // TODO
+    pub units: Vec<UnitData>,
     pub x: f64,
     pub y: f64,
 }
@@ -108,28 +108,32 @@ pub struct PointData {
     pub eta: f64,
     #[serde(rename = "ETA_locked")]
     pub eta_locked: bool,
-    pub action: String,             // TODO: enum
-    pub alt: i64,                   // f64?
-    pub alt_type: String,           // TODO: enum
+    pub action: WaypointAction,
+    pub alt: i64, // f64?
+    pub alt_type: AltitudeType,
     pub formation_template: String, // TODO: enum?
+    // airdromeId
+    // helipadId
     pub name: String,
     pub properties: Value,
     pub speed: f64,
     pub speed_locked: bool,
     pub task: Value, // TODO: enum
     #[serde(rename = "type")]
-    pub kind: String, // TODO: enum
+    pub kind: WaypointType,
     pub x: f64,
     pub y: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnitData {
+    #[serde(rename = "unitId")]
+    pub id: u64,
     // AddPropAircraft
     // Radio
-    pub alt: i64,         // f64?
-    pub alt_type: String, // TODO: enum
-    pub callsign: Value,  // TODO: propper struct
+    pub alt: i64, // f64?
+    pub alt_type: AltitudeType,
+    pub callsign: Value, // TODO: propper struct
     // hardpoint_racks
     pub heading: f64,
     // livery_id
@@ -137,14 +141,110 @@ pub struct UnitData {
     // onboard_num
     pub payload: Value, // TODO
     // psi
-    pub skill: String, // TODO: enum
+    pub skill: Skill,
     pub speed: f64,
     #[serde(rename = "type")]
-    pub kind: String,
-    #[serde(rename = "unitId")]
-    pub unit_id: u64,
+    pub kind: String, // TODO: enum?
     pub x: f64,
     pub y: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Skill {
+    Average,
+    Client,
+    Excellent,
+    Good,
+    High,
+    Player,
+}
+
+impl Default for Skill {
+    fn default() -> Self {
+        Skill::Average
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum AltitudeType {
+    #[serde(rename = "BARO")]
+    Baro,
+    #[serde(rename = "RADIO")]
+    Radio,
+}
+
+impl Default for AltitudeType {
+    fn default() -> Self {
+        AltitudeType::Baro
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum WaypointType {
+    Land,
+    TakeOff,
+    TakeOffParking,
+    TakeOffParkingHot,
+    #[serde(rename = "Turning Point")]
+    TurningPoint,
+}
+
+impl Default for WaypointType {
+    fn default() -> Self {
+        WaypointType::TurningPoint
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum WaypointAction {
+    #[serde(rename = "Landing")]
+    Land,
+    #[serde(rename = "From Runway")]
+    TakeOff,
+    #[serde(rename = "From Parking Area")]
+    TakeOffParking,
+    #[serde(rename = "From Parking Area Hot")]
+    TakeOffParkingHot,
+    #[serde(rename = "Turning Point")]
+    TurningPoint,
+    #[serde(rename = "Fly Over Point")]
+    FlyOverPoint,
+}
+
+impl Default for WaypointAction {
+    fn default() -> Self {
+        WaypointAction::TurningPoint
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Task {
+    #[serde(rename = "Nothing")]
+    Nothing,
+    #[serde(rename = "AFAC")]
+    AFAC,
+    #[serde(rename = "Anti-ship Strike")]
+    AntiShipStrike,
+    #[serde(rename = "AWACS")]
+    AWACS,
+    #[serde(rename = "CAP")]
+    CAP,
+    #[serde(rename = "CAS")]
+    CAS,
+    #[serde(rename = "Escort")]
+    Escort,
+    #[serde(rename = "Fighter Sweep")]
+    FighterSweep,
+    #[serde(rename = "Ground Attack")]
+    GroundAttack,
+    #[serde(rename = "Intercept")]
+    Intercept,
+}
+
+impl Default for Task {
+    fn default() -> Self {
+        Task::Nothing
+    }
 }
 
 impl Iterator for GroupIterator {
