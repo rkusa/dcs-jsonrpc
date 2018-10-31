@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::coalition::Coalition;
+use crate::country::Country;
 use crate::error::Error;
 use crate::jsonrpc::Client;
 use serde_json::Value;
@@ -7,7 +9,7 @@ use serde_json::Value;
 #[derive(Clone)]
 pub struct Group {
     client: Client,
-    name: String,
+    name: String, // TODO: use group id instead?
 }
 
 enum_number!(GroupCategory {
@@ -44,11 +46,28 @@ impl Group {
     }
 
     pub fn group_data(&self) -> Result<Option<GroupData>, Error> {
-        let group_data: Option<GroupData> = self
-            .client
-            .request("getGroupData", Some(NameParams { name: &self.name }))?;
+        self.client
+            .request("groupData", Some(NameParams { name: &self.name }))
+    }
 
-        Ok(group_data)
+    pub fn coalition(&self) -> Result<Option<Coalition>, Error> {
+        self.client
+            .request("groupCoalition", Some(NameParams { name: &self.name }))
+    }
+
+    pub fn country(&self) -> Result<Option<Country>, Error> {
+        self.client
+            .request("groupCountry", Some(NameParams { name: &self.name }))
+    }
+
+    pub fn category(&self) -> Result<Option<GroupCategory>, Error> {
+        self.client
+            .request("groupCategory", Some(NameParams { name: &self.name }))
+    }
+
+    pub fn activate(&self) -> Result<(), Error> {
+        self.client
+            .notification("groupActivate", Some(NameParams { name: &self.name }))
     }
 }
 
@@ -59,73 +78,73 @@ pub struct GroupIterator {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GroupData {
-    communication: bool,
-    frequency: u16,
+    pub communication: bool,
+    pub frequency: u16,
     #[serde(rename = "groupId")]
-    group_id: u64,
-    hidden: bool,
-    modulation: i64,
-    name: String,
+    pub group_id: u64,
+    pub hidden: bool,
+    pub modulation: i64,
+    pub name: String,
     #[serde(rename = "radioSet")]
-    radio_set: bool,
-    route: RouteData,
-    start_time: u64,
-    task: String, // TODO: enum
-    tasks: Value, // TODO
-    uncontrolled: bool,
-    units: Vec<UnitData>, // TODO
-    x: f64,
-    y: f64,
+    pub radio_set: bool,
+    pub route: RouteData,
+    pub start_time: u64,
+    pub task: String, // TODO: enum
+    pub tasks: Value, // TODO
+    pub uncontrolled: bool,
+    pub units: Vec<UnitData>, // TODO
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RouteData {
-    points: Vec<PointData>,
+    pub points: Vec<PointData>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PointData {
     #[serde(rename = "ETA")]
-    eta: i64,
+    pub eta: f64,
     #[serde(rename = "ETA_locked")]
-    eta_locked: bool,
-    action: String,             // TODO: enum
-    alt: i64,                   // f64?
-    alt_type: String,           // TODO: enum
-    formation_template: String, // TODO: enum?
-    name: String,
-    properties: Value,
-    speed: f64,
-    speed_locked: bool,
-    task: Value, // TODO: enum
+    pub eta_locked: bool,
+    pub action: String,             // TODO: enum
+    pub alt: i64,                   // f64?
+    pub alt_type: String,           // TODO: enum
+    pub formation_template: String, // TODO: enum?
+    pub name: String,
+    pub properties: Value,
+    pub speed: f64,
+    pub speed_locked: bool,
+    pub task: Value, // TODO: enum
     #[serde(rename = "type")]
-    kind: String, // TODO: enum
-    x: f64,
-    y: f64,
+    pub kind: String, // TODO: enum
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnitData {
     // AddPropAircraft
     // Radio
-    alt: i64,         // f64?
-    alt_type: String, // TODO: enum
-    callsign: Value,  // TODO: propper struct
+    pub alt: i64,         // f64?
+    pub alt_type: String, // TODO: enum
+    pub callsign: Value,  // TODO: propper struct
     // hardpoint_racks
-    heading: f64,
+    pub heading: f64,
     // livery_id
-    name: String,
+    pub name: String,
     // onboard_num
-    payload: Value, // TODO
+    pub payload: Value, // TODO
     // psi
-    skill: String, // TODO: enum
-    speed: f64,
+    pub skill: String, // TODO: enum
+    pub speed: f64,
     #[serde(rename = "type")]
-    kind: String,
+    pub kind: String,
     #[serde(rename = "unitId")]
-    unit_id: u64,
-    x: f64,
-    y: f64,
+    pub unit_id: u64,
+    pub x: f64,
+    pub y: f64,
 }
 
 impl Iterator for GroupIterator {

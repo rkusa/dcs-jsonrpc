@@ -72,7 +72,7 @@ function method_groupExists(params)
     end
 end
 
-function method_getGroupData(params)
+function method_groupData(params)
     -- TODO: return error on missing params
     local group = Group.getByName(params.name)
     if group == nil then
@@ -99,6 +99,58 @@ function method_getGroupData(params)
     end
 
     return success(nil)
+end
+
+function method_groupCoalition(params)
+    -- TODO: return error on missing params
+    local group = Group.getByName(params.name)
+    if group == nil then
+        return success(nil)
+    else
+        return success(group:getCoalition())
+    end
+end
+
+function method_groupCountry(params)
+    -- TODO: return error on missing params
+    local group = Group.getByName(params.name)
+    if group == nil then
+        return success(nil)
+    else
+        local unit = group:getUnit(1)
+        if unit == nil then
+            return success(nil)
+        else
+            return success(group:getUnit(1):getCountry())
+        end
+    end
+end
+
+function method_groupCategory(params)
+    -- TODO: return error on missing params
+    local group = Group.getByName(params.name)
+    if group == nil then
+        return success(nil)
+    else
+        return success(group:getCategory())
+    end
+end
+
+function method_addGroup(params)
+    -- TODO: return error on missing params
+    coalition.addGroup(params.country, params.category, params.data)
+    -- Note: the group does not exist immediately, why we cannot do something like
+    -- group:getName() here
+    return success("ok")
+end
+
+function method_groupActivate(params)
+    -- TODO: return error on missing params
+    local group = Group.getByName(params.name)
+    if group ~= nil then
+        group:activate()
+    end
+    return success("ok")
 end
 
 --

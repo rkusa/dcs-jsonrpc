@@ -6,6 +6,7 @@ extern crate serde_derive;
 #[macro_use]
 mod macros;
 mod coalition;
+mod country;
 mod error;
 mod event;
 mod group;
@@ -17,6 +18,7 @@ use std::net::ToSocketAddrs;
 use std::sync::mpsc::{channel, Receiver};
 
 pub use self::coalition::Coalition;
+pub use self::country::Country;
 pub use self::error::Error;
 pub use self::event::Event;
 use self::event::RawEvent;
@@ -64,6 +66,32 @@ impl Client {
             client: self.client.clone(),
             group_names,
         })
+    }
+
+    pub fn add_group(
+        &self,
+        country: Country,
+        category: GroupCategory,
+        data: GroupData,
+    ) -> Result<Group, Error> {
+        #[derive(Serialize)]
+        struct Params {
+            country: Country,
+            category: GroupCategory,
+            data: GroupData,
+        }
+
+        let name = data.name.clone();
+        self.client.notification(
+            "addGroup",
+            Some(Params {
+                country,
+                category,
+                data,
+            }),
+        )?;
+
+        Ok(Group::new(self.client.clone(), name))
     }
 
     pub fn events(&self) -> Result<EventsIterator, Error> {
