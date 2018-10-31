@@ -62,7 +62,7 @@ pub struct GroupData {
     communication: bool,
     frequency: u16,
     #[serde(rename = "groupId")]
-    group_id: i64,
+    group_id: u64,
     hidden: bool,
     modulation: i64,
     name: String,
@@ -73,7 +73,7 @@ pub struct GroupData {
     task: String, // TODO: enum
     tasks: Value, // TODO
     uncontrolled: bool,
-    units: Value, // TODO
+    units: Vec<UnitData>, // TODO
     x: f64,
     y: f64,
 }
@@ -100,6 +100,30 @@ pub struct PointData {
     task: Value, // TODO: enum
     #[serde(rename = "type")]
     kind: String, // TODO: enum
+    x: f64,
+    y: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UnitData {
+    // AddPropAircraft
+    // Radio
+    alt: i64,         // f64?
+    alt_type: String, // TODO: enum
+    callsign: Value,  // TODO: propper struct
+    // hardpoint_racks
+    heading: f64,
+    // livery_id
+    name: String,
+    // onboard_num
+    payload: Value, // TODO
+    // psi
+    skill: String, // TODO: enum
+    speed: f64,
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(rename = "unitId")]
+    unit_id: u64,
     x: f64,
     y: f64,
 }
