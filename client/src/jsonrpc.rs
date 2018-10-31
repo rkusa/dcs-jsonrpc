@@ -38,7 +38,7 @@ impl Client {
         let subs = Arc::new(Mutex::new(Vec::new()));
         let (tx, rx) = mpsc::channel::<Vec<u8>>();
         let client = Client {
-            tx: tx,
+            tx,
             pending: pending.clone(),
             next_id: Arc::new(Mutex::new(0)),
             subscriptions: subs.clone(),
@@ -102,8 +102,8 @@ impl Client {
         thread::spawn(move || {
             let mut forwad = || -> Result<(), Error> {
                 let mut data = rx.recv()?;
-                data.push('\n' as u8);
-                stream.write(&data)?;
+                data.push(b'\n' as u8);
+                stream.write_all(&data)?;
                 Ok(())
             };
 
@@ -128,7 +128,7 @@ impl Client {
             jsonrpc: Version::V2,
             method: method.to_string(),
             params: params
-                .map(|p| serde_json::to_value(p))
+                .map(serde_json::to_value)
                 .map_or(Ok(None), |r| r.map(Some))?,
             id: self.get_next_id(),
         };
@@ -161,7 +161,7 @@ impl Client {
             jsonrpc: Version::V2,
             method: method.to_string(),
             params: params
-                .map(|p| serde_json::to_value(p))
+                .map(serde_json::to_value)
                 .map_or(Ok(None), |r| r.map(Some))?,
         };
 
@@ -173,13 +173,8 @@ impl Client {
 
     fn get_next_id(&self) -> ID {
         let mut next_id = self.next_id.lock().unwrap();
-        let id = if *next_id == i64::max_value() {
-            0
-        } else {
-            *next_id + 1
-        };
-        *next_id = id;
-        ID::Number(id)
+        *next_id = next_id.wrapping_add(1);
+        ID::Number(*next_id)
     }
 
     pub(crate) fn add_subscription(&self, tx: mpsc::Sender<RawEvent>) {

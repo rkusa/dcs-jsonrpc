@@ -102,6 +102,7 @@ pub struct RouteData {
     pub points: Vec<PointData>,
 }
 
+// known unimplemented properties: airdromeId, helipadId, formation_template
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PointData {
     #[serde(rename = "ETA")]
@@ -111,9 +112,6 @@ pub struct PointData {
     pub action: WaypointAction,
     pub alt: i64, // f64?
     pub alt_type: AltitudeType,
-    pub formation_template: String, // TODO: enum?
-    // airdromeId
-    // helipadId
     pub name: String,
     pub properties: Value,
     pub speed: f64,
@@ -125,26 +123,22 @@ pub struct PointData {
     pub y: f64,
 }
 
+// known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks, livery_id,
+// onboard_num, psi
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnitData {
     #[serde(rename = "unitId")]
     pub id: u64,
-    // AddPropAircraft
-    // Radio
+    #[serde(rename = "type")]
+    pub kind: String, // TODO: enum?
+    pub name: String,
     pub alt: i64, // f64?
     pub alt_type: AltitudeType,
     pub callsign: Value, // TODO: propper struct
-    // hardpoint_racks
     pub heading: f64,
-    // livery_id
-    pub name: String,
-    // onboard_num
     pub payload: Value, // TODO
-    // psi
     pub skill: Skill,
     pub speed: f64,
-    #[serde(rename = "type")]
-    pub kind: String, // TODO: enum?
     pub x: f64,
     pub y: f64,
 }
