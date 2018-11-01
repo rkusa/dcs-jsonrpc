@@ -230,7 +230,10 @@ function eventHandler:onEvent(event)
             time = event.time,
             initiator = event.initiator:getName(),
             weapon = event.weapon:getName(),
-            target = event.target:getName(),
+            target = {
+                category = event.target:getCategory(),
+                name = event.target:getName(),
+            },
         }))
 
     -- Occurs when an aircraft takes off from an airbase, farp, or ship.

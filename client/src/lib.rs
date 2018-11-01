@@ -5,6 +5,7 @@ extern crate serde_derive;
 
 #[macro_use]
 mod macros;
+mod airbase;
 mod coalition;
 mod country;
 mod error;
@@ -17,6 +18,7 @@ mod weapon;
 use std::net::ToSocketAddrs;
 use std::sync::mpsc::{channel, Receiver};
 
+pub use self::airbase::Airbase;
 pub use self::coalition::Coalition;
 pub use self::country::Country;
 pub use self::error::Error;
