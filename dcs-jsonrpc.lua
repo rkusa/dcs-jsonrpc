@@ -215,7 +215,7 @@ function eventHandler:onEvent(event)
     -- Occurs whenever any unit in a mission fires a weapon.
     -- But not any machine gun or autocannon based weapon, those are handled by shooting_start
     if event.id == world.event.S_EVENT_SHOT then
-        jsonrpc.broadcast("shot", json:encode({
+        jsonrpc.broadcast("Shot", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
             weapon = event.weapon:getName(),
@@ -234,7 +234,7 @@ function eventHandler:onEvent(event)
         }))
 
     -- Occurs when an aircraft takes off from an airbase, farp, or ship.
-    -- Initiator: The unit that tookoff
+    -- Initiator: The unit that took off
     -- Place: Object from where the AI took-off from. Can be an Airbase Object, FARP, or Ships
     elseif event.id == world.event.S_EVENT_TAKEOFF then
         jsonrpc.broadcast("Takeoff", json:encode({
@@ -247,7 +247,7 @@ function eventHandler:onEvent(event)
     -- Initiator: The unit that has landed
     -- Place: Object that the unit landed on. Can be an Airbase Object, FARP, or Ships
     elseif event.id == world.event.S_EVENT_LAND then
-        jsonrpc.broadcast("Landing", json:encode({
+        jsonrpc.broadcast("Land", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
             place = event.object:getName(),
@@ -289,7 +289,7 @@ function eventHandler:onEvent(event)
     -- Can occur either if the player is alive and crashes or if a weapon kills the pilot without completely destroying the plane.
     -- Initiator: The unit that the pilot has died in.
     elseif event.id == world.event.S_EVENT_PILOT_DEAD then
-        jsonrpc.broadcast("Player Died", json:encode({
+        jsonrpc.broadcast("PilotDead", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
@@ -298,29 +298,35 @@ function eventHandler:onEvent(event)
     -- Initiator : The unit that captured the base
     -- Place: The airbase that was captured, can be a FARP or Airbase. When calling place:getCoalition() the faction will already be the new owning faction.
     elseif event.id == world.event.S_EVENT_BASE_CAPTURED then
-        jsonrpc.broadcast("Base Captured", json:encode({
+        jsonrpc.broadcast("BaseCapture", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
-            place = event.object:getName(),
+            place = event.place:getName(),
         }))
 
     -- Occurs when a mission starts
     elseif event.id == world.event.S_EVENT_MISSION_START then
-        jsonrpc.broadcast("Mission Start", json:encode({
+        jsonrpc.broadcast("MissionStart", json:encode({
             time = event.time,
         }))
 
     -- Occurs when a mission ends.
     elseif event.id == world.event.S_EVENT_MISSION_END then
-        jsonrpc.broadcast("mission_end", json:encode({
+        jsonrpc.broadcast("MissionEnd", json:encode({
             time = event.time,
         }))
         jsonrpc.stop()
 
+    elseif event.id == world.event.S_EVENT_TOOK_CONTROL then
+        jsonrpc.broadcast("TookControl", json:encode({
+            time = event.time,
+            initiator = event.initiator:getName(),
+        }))
+
     -- Occurs when an aircraft is finished taking fuel.
     -- Initiator: The unit that was receiving fuel.
     elseif event.id == world.event.S_EVENT_REFUELING_STOP then
-        jsonrpc.broadcast("Refueling Stopped", json:encode({
+        jsonrpc.broadcast("RefuelingStop", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
@@ -336,7 +342,7 @@ function eventHandler:onEvent(event)
     -- Occurs when any system fails on a human controlled aircraft.
     -- Initiator: The unit that had the failure
     elseif event.id == world.event.S_EVENT_HUMAN_FAILURE then
-        jsonrpc.broadcast("Human System Failure", json:encode({
+        jsonrpc.broadcast("SystemFailure", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
@@ -344,15 +350,15 @@ function eventHandler:onEvent(event)
     -- Occurs when any aircraft starts its engines.
     -- Initiator: The unit that is starting its engines.
     elseif event.id == world.event.S_EVENT_ENGINE_STARTUP then
-        json.broadcast("Engine Startup", json:encode({
+        json.broadcast("EngineStartup", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
 
     -- Occurs when any aircraft shuts down its engines.
     -- Initiator: The unit that is stopping its engines
-    elseif event.id == world.event.  then
-        json.broadcast("Engine Shutdown", json:encode({
+    elseif event.id == world.event.S_EVENT_ENGINE_SHUTDOWN  then
+        json.broadcast("EngineShutdown", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
@@ -360,7 +366,7 @@ function eventHandler:onEvent(event)
     -- Occurs when any player assumes direct control of a unit.
     -- Initiator: The unit that is being taken control of.
     elseif event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
-        jsonrpc.broadcast("Player Entered Unit", json:encode({
+        jsonrpc.broadcast("PlayerEnterUnit", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
@@ -368,7 +374,13 @@ function eventHandler:onEvent(event)
     -- Occurs when any player relieves control of a unit to the AI.
     -- Initiator: The unit that the player left.
     elseif event.id == world.event.S_EVENT_PLAYER_LEAVE_UNIT then
-        json.broadcast("Player Left Unit", json:encode({
+        json.broadcast("PlayerLeaveUnit", json:encode({
+            time = event.time,
+            initiator = event.initiator:getName(),
+        }))
+
+    elseif event.id == world.event.S_EVENT_PLAYER_COMMENT then
+        json.broadcast("PlayerComment", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
@@ -377,7 +389,7 @@ function eventHandler:onEvent(event)
     -- Initiator: The unit that is doing the shooting
     -- Target: The unit that is being targeted.
     elseif event.id == world.event.S_EVENT_SHOOTING_START then
-        json.broadcast("Shooting Start", json:encode({
+        json.broadcast("ShootingStart", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
             target = event.target:getName(),
@@ -386,12 +398,14 @@ function eventHandler:onEvent(event)
     -- Occurs when any unit stops firing its weapon. Event will always correspond with a shooting start event.
     -- Initiator: The unit that was doing the shooing.
     elseif event.id == world.event.S_EVENT_SHOOTING_END then
-        json.broadcast("Shooting End", json:encode({
+        json.broadcast("ShootingEnd", json:encode({
             time = event.time,
             initiator = event.initiator:getName(),
         }))
 
     end
+
+    -- unimplemented: S_EVENT_MARK_ADDED, S_EVENT_MARK_CHANGE, S_EVENT_MARK_REMOVED
 end
 
 world.addEventHandler(eventHandler)

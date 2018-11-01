@@ -92,31 +92,163 @@ Subscribe to events by calling the `subscribe` method and providing the event na
 >> {"jsonrpc":"2.0","method":"subscribe","params":{"name":"player_enter_unit"},"id":2}
 ```
 
-### [`shot`](https://wiki.hoggitworld.com/view/DCS_event_shot)
+### [`Shot`](https://wiki.hoggitworld.com/view/DCS_event_shot)
 
 Occurs whenever any unit in a mission fires a weapon. But not any machine gun or autocannon based weapon, those are handled by shooting_start.
 
 **Params:**
-- *time* - the event's mission time
-- *initiator* - The name of the unit that fired the weapon
-- *weapon* - The name of the weapon that has been fired
+- _time_: the event's mission time
+- _initiator_: The name of the unit that fired the weapon
+- _weapon_: The name of the weapon that has been fired
 
-### [`mission_end`](https://wiki.hoggitworld.com/view/DCS_event_mission_end)
+### [`Hit`](https://wiki.hoggitworld.com/view/DCS_event_hit)
+
+Occurs whenever an object is hit by a weapon.
+
+**Params:**
+- _initiator_: The unit object the fired the weapon
+- _weapon_: Weapon object that hit the target
+- _target_: The Object that was hit.
+
+### [`Takeoff`](https://wiki.hoggitworld.com/view/DCS_event_takeoff)
+
+Occurs when an aircraft takes off from an airbase, farp, or ship.
+
+**Params:**
+- _initiator_: The unit that took off
+- _place_: Object from where the AI took-off from. Can be an Airbase Object, FARP, or Ships
+
+### [`Land`](https://wiki.hoggitworld.com/view/DCS_event_land)
+
+Occurs when an aircraft lands at an airbase, farp or ship
+
+**Params:**
+- _initiator_: The unit that has landed
+- _place_: Object that the unit landed on. Can be an Airbase Object, FARP, or Ships
+
+### [`Crash`](https://wiki.hoggitworld.com/view/DCS_event_crash)
+
+Occurs when any aircraft crashes into the ground and is completely destroyed.
+
+**Params:**
+- _initiator_: The unit that has crashed
+
+### [`Ejection`](https://wiki.hoggitworld.com/view/DCS_event_ejection)
+
+Occurs when a pilot ejects from an aircraft
+
+**Params:**
+- _initiator_: The unit that has ejected
+
+### [`Refueling`](https://wiki.hoggitworld.com/view/DCS_event_refueling)
+
+Occurs when an aircraft connects with a tanker and begins taking on fuel.
+
+**Params:**
+- _initiator_: The unit that is receiving fuel.
+
+### [`Dead`](https://wiki.hoggitworld.com/view/DCS_event_dead)
+
+Occurs when an object is completely destroyed.
+
+**Params:**
+- _initiator_: The unit that is was destroyed.
+
+### [`PilotDead`](https://wiki.hoggitworld.com/view/DCS_event_pilot_dead)
+
+Occurs when the pilot of an aircraft is killed.
+
+**Params:**
+- _can_ occur either if the player is alive and crashes or if a weapon kills the pilot without completely destroying the plane.
+- _initiator_: The unit that the pilot has died in.
+
+### [`BaseCapture`](https://wiki.hoggitworld.com/view/DCS_event_base_captured)
+
+Occurs when a ground unit captures either an airbase or a farp.
+
+**Params:**
+- _initiator_ : The unit that captured the base
+- _place_: The airbase that was captured, can be a FARP or Airbase. When calling place:getCoalition() the faction will already be the new owning faction.
+
+### [`MissionStart`](https://wiki.hoggitworld.com/view/DCS_event_mission_start)
+
+Occurs when a mission starts
+
+### [`MissionEnd`](https://wiki.hoggitworld.com/view/DCS_event_mission_end)
 
 Occurs when a mission ends.
 
 **Params:**
-- *time* - the event's mission time
+- _time_: the event's mission time
 
-### [`player_enter_unit`](https://wiki.hoggitworld.com/view/DCS_event_player_enter_unit)
+### [`TookControl`](https://wiki.hoggitworld.com/view/DCS_event_took_control)
+
+### [`RefuelingStop`](https://wiki.hoggitworld.com/view/DCS_event_refueling_stop)
+
+Occurs when an aircraft is finished taking fuel.
+
+**Params:**
+- _initiator_: The unit that was receiving fuel.
+
+### [`Birth`](https://wiki.hoggitworld.com/view/DCS_event_birth)
+
+Occurs when any object is spawned into the mission.
+
+**Params:**
+- _initiator_: The unit that was spawned
+
+### [`SystemFailure`](https://wiki.hoggitworld.com/view/DCS_event_human_failure)
+
+Occurs when any system fails on a human controlled aircraft.
+
+**Params:**
+- _initiator_: The unit that had the failure
+
+### [`EngineStartup`](https://wiki.hoggitworld.com/view/DCS_event_engine_startup)
+
+Occurs when any aircraft starts its engines.
+
+**Params:**
+- _initiator_: The unit that is starting its engines.
+
+### [`EngineShutdown`](https://wiki.hoggitworld.com/view/DCS_event_engine_shutdown)
+
+Occurs when any aircraft shuts down its engines.
+
+**Params:**
+- _initiator_: The unit that is stopping its engines
+
+### [`PlayerEnterUnit`](https://wiki.hoggitworld.com/view/DCS_event_player_enter_unit)
 
 Occurs when any player assumes direct control of a unit.
 
 **Params:**
-- *time* - the event's mission time
-- *initiator* - The name of the unit that is being taken control of
+- _time_: the event's mission time
+- _initiator_: The name of the unit that is being taken control of
 
+### [`PlayerLeaveUnit`](https://wiki.hoggitworld.com/view/DCS_event_player_leave_unit)
 
+Occurs when any player relieves control of a unit to the AI.
+
+**Params:**
+- _initiator_: The unit that the player left.
+
+### [`PlayerComment`](https://wiki.hoggitworld.com/view/DCS_event_player_comment)
+
+### [`ShootingStart`](https://wiki.hoggitworld.com/view/DCS_event_shooting_start)
+
+Occurs when any unit begins firing a weapon that has a high rate of fire. Most common with aircraft cannons (GAU-8), autocannons, and machine guns.
+
+**Params:**
+- _initiator_: The unit that is doing the shooting
+- _target_: The unit that is being targeted.
+
+### [`ShootingEnd`](https://wiki.hoggitworld.com/view/DCS_event_shooting_end)
+
+Occurs when any unit stops firing its weapon. Event will always correspond with a shooting start event.
+
+**Params:**
+- _initiator_: The unit that was doing the shooing.
 
 
 
