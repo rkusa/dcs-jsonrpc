@@ -1,15 +1,14 @@
+use std::borrow::Cow;
 use std::fmt;
 
-use crate::coalition::Coalition;
-use crate::country::Country;
-use crate::error::Error;
 use crate::jsonrpc::Client;
+use crate::{Coalition, Country, Error, Identifier};
 use serde_json::Value;
 
 #[derive(Clone)]
 pub struct Group {
     client: Client,
-    name: String, // TODO: use group id instead?
+    id: Identifier,
 }
 
 enum_number!(GroupCategory {
@@ -20,54 +19,46 @@ enum_number!(GroupCategory {
     Train = 4,
 });
 
-#[derive(Serialize)]
-struct NameParams<'a> {
-    name: &'a str,
-}
-
 impl Group {
-    pub(crate) fn new<S: Into<String>>(client: Client, name: S) -> Self {
+    pub(crate) fn new<I: Into<Identifier>>(client: Client, id: I) -> Self {
         Group {
             client,
-            name: name.into(),
+            id: id.into(),
         }
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> Result<Cow<'_, str>, Error> {
+        match self.id {
+            Identifier::ID(_) => self
+                .client
+                .request("groupName", Some(&self.id))
+                .map(Cow::Owned),
+            Identifier::Name(ref name) => Ok(Cow::Borrowed(name)),
+        }
     }
 
     pub fn exists(&self) -> Result<bool, Error> {
-        let exists: bool = self
-            .client
-            .request("groupExists", Some(NameParams { name: &self.name }))?;
-
-        Ok(exists)
+        self.client.request("groupExists", Some(&self.id))
     }
 
     pub fn group_data(&self) -> Result<Option<GroupData>, Error> {
-        self.client
-            .request("groupData", Some(NameParams { name: &self.name }))
+        self.client.request("groupData", Some(&self.id))
     }
 
     pub fn coalition(&self) -> Result<Option<Coalition>, Error> {
-        self.client
-            .request("groupCoalition", Some(NameParams { name: &self.name }))
+        self.client.request("groupCoalition", Some(&self.id))
     }
 
     pub fn country(&self) -> Result<Option<Country>, Error> {
-        self.client
-            .request("groupCountry", Some(NameParams { name: &self.name }))
+        self.client.request("groupCountry", Some(&self.id))
     }
 
     pub fn category(&self) -> Result<Option<GroupCategory>, Error> {
-        self.client
-            .request("groupCategory", Some(NameParams { name: &self.name }))
+        self.client.request("groupCategory", Some(&self.id))
     }
 
     pub fn activate(&self) -> Result<(), Error> {
-        self.client
-            .notification("groupActivate", Some(NameParams { name: &self.name }))
+        self.client.notification("groupActivate", Some(&self.id))
     }
 }
 
@@ -253,6 +244,6 @@ impl Iterator for GroupIterator {
 
 impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "Group {}", self.id)
     }
 }

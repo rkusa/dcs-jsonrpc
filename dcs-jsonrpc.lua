@@ -12,6 +12,58 @@ local jsonrpc = require "dcsjsonrpc"
 jsonrpc.start()
 
 --
+-- build object id to name tables
+--
+local groupId2Name = {}
+local unitId2Name = {}
+
+for _, coalition in pairs(env.mission.coalition) do
+    for _, country in pairs(coalition.country) do
+        for _, category in pairs(country) do
+            if type(category) == 'table' and type(category.group) == 'table' then
+                for _, groupData in pairs(category.group) do
+                    local name = env.getValueDictByKey(groupData.name)
+                    groupId2Name[groupData.groupId] = name
+                    
+                    if type(groupData.units) == 'table' then
+                        for _, unitData in pairs(groupData.units) do
+                            local name = env.getValueDictByKey(unitData.name)
+                            unitId2Name[unitData.unitId] = name
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+function groupByIdentifier(params)
+    local name = params.name
+    if type(params.name) ~= "string" then
+        name = groupId2Name[params.id]
+    end
+
+    if type(name) == "string" then
+        return Group.getByName(name)
+    else
+        return nil
+    end
+end
+
+function unitByIdentifier(params)
+    local name = params.name
+    if type(params.name) ~= "string" then
+        name = unitId2Name[params.id]
+    end
+
+    if type(name) == "string" then
+        return Unit.getByName(name)
+    else
+        return nil
+    end
+end
+
+--
 -- RPC methods
 --
 
@@ -62,9 +114,19 @@ function method_getGroups(params)
     return success(names)
 end
 
+function method_groupName(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    if group == nil then
+        return success(false)
+    else
+        return success(group:getName())
+    end
+end
+
 function method_groupExists(params)
     -- TODO: return error on missing params
-    local group = Group.getByName(params.name)
+    local group = groupByIdentifier(params)
     if group == nil then
         return success(false)
     else
@@ -74,7 +136,7 @@ end
 
 function method_groupData(params)
     -- TODO: return error on missing params
-    local group = Group.getByName(params.name)
+    local group = groupByIdentifier(params)
     if group == nil then
         return success(nil)
     end
@@ -103,7 +165,7 @@ end
 
 function method_groupCoalition(params)
     -- TODO: return error on missing params
-    local group = Group.getByName(params.name)
+    local group = groupByIdentifier(params)
     if group == nil then
         return success(nil)
     else
@@ -113,7 +175,7 @@ end
 
 function method_groupCountry(params)
     -- TODO: return error on missing params
-    local group = Group.getByName(params.name)
+    local group = groupByIdentifier(params)
     if group == nil then
         return success(nil)
     else
@@ -128,7 +190,7 @@ end
 
 function method_groupCategory(params)
     -- TODO: return error on missing params
-    local group = Group.getByName(params.name)
+    local group = groupByIdentifier(params)
     if group == nil then
         return success(nil)
     else
@@ -146,11 +208,25 @@ end
 
 function method_groupActivate(params)
     -- TODO: return error on missing params
-    local group = Group.getByName(params.name)
+    local group = groupByIdentifier(params)
     if group ~= nil then
         group:activate()
     end
     return success("ok")
+end
+
+--
+-- RPC Unit methods
+--
+
+function method_unitName(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(false)
+    else
+        return success(unit:getID())
+    end
 end
 
 --
@@ -209,16 +285,26 @@ end, nil, timer.getTime() + .1)
 --
 -- listen to DCS events
 --
-local eventHandler = {}
-function eventHandler:onEvent(event)
+function idAndName(obj)
+    local result = {
+        id = tonumber(obj:getID()),
+    }
+    local name = obj:getName()
+    if type(name) == "string" then
+        result.name = name
+    end
+    return result
+end
+
+function onEvent(event)
     
     -- Occurs whenever any unit in a mission fires a weapon.
     -- But not any machine gun or autocannon based weapon, those are handled by shooting_start
     if event.id == world.event.S_EVENT_SHOT then
         jsonrpc.broadcast("Shot", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
-            weapon = event.weapon:getName(),
+            initiator = idAndName(event.initiator),
+            weapon = { id = event.weapon:getID() },
         }))
 
     -- Occurs whenever an object is hit by a weapon.
@@ -226,14 +312,13 @@ function eventHandler:onEvent(event)
     -- Weapon: Weapon object that hit the target
     -- Target: The Object that was hit.
     elseif event.id == world.event.S_EVENT_HIT then
+        local target = idAndName(event.target)
+        target.category = event.target:getCategory()
         jsonrpc.broadcast("Hit", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
-            weapon = event.weapon:getName(),
-            target = {
-                category = event.target:getCategory(),
-                name = event.target:getName(),
-            },
+            initiator = idAndName(event.initiator),
+            weapon = { id = event.weapon:getID() },
+            target = target,
         }))
 
     -- Occurs when an aircraft takes off from an airbase, farp, or ship.
@@ -242,8 +327,8 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_TAKEOFF then
         jsonrpc.broadcast("Takeoff", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
-            place = event.object:getName(),
+            initiator = idAndName(event.initiator),
+            place = idAndName(event.object),
         }))
 
     -- Occurs when an aircraft lands at an airbase, farp or ship
@@ -252,8 +337,8 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_LAND then
         jsonrpc.broadcast("Land", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
-            place = event.object:getName(),
+            initiator = idAndName(event.initiator),
+            place = idAndName(event.object),
         }))
 
     -- Occurs when any aircraft crashes into the ground and is completely destroyed.
@@ -261,7 +346,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_CRASH then
         jsonrpc.broadcast("Crash", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when a pilot ejects from an aircraft
@@ -269,7 +354,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_EJECTION then
         jsonrpc.broadcast("Ejection", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when an aircraft connects with a tanker and begins taking on fuel.
@@ -277,7 +362,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_REFUELING then
         jsonrpc.broadcast("Refueling", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when an object is completely destroyed.
@@ -285,7 +370,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_DEAD then
         jsonrpc.broadcast("Dead", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when the pilot of an aircraft is killed.
@@ -294,7 +379,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_PILOT_DEAD then
         jsonrpc.broadcast("PilotDead", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when a ground unit captures either an airbase or a farp.
@@ -303,8 +388,8 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_BASE_CAPTURED then
         jsonrpc.broadcast("BaseCapture", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
-            place = event.place:getName(),
+            initiator = idAndName(event.initiator),
+            place = idAndName(event.place),
         }))
 
     -- Occurs when a mission starts
@@ -323,7 +408,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_TOOK_CONTROL then
         jsonrpc.broadcast("TookControl", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when an aircraft is finished taking fuel.
@@ -331,7 +416,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_REFUELING_STOP then
         jsonrpc.broadcast("RefuelingStop", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when any object is spawned into the mission.
@@ -339,7 +424,7 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_BIRTH then
         jsonrpc.broadcast("Birth", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when any system fails on a human controlled aircraft.
@@ -347,23 +432,23 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_HUMAN_FAILURE then
         jsonrpc.broadcast("SystemFailure", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
     
     -- Occurs when any aircraft starts its engines.
     -- Initiator: The unit that is starting its engines.
     elseif event.id == world.event.S_EVENT_ENGINE_STARTUP then
-        json.broadcast("EngineStartup", json:encode({
+        jsonrpc.broadcast("EngineStartup", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when any aircraft shuts down its engines.
     -- Initiator: The unit that is stopping its engines
     elseif event.id == world.event.S_EVENT_ENGINE_SHUTDOWN  then
-        json.broadcast("EngineShutdown", json:encode({
+        jsonrpc.broadcast("EngineShutdown", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when any player assumes direct control of a unit.
@@ -371,39 +456,39 @@ function eventHandler:onEvent(event)
     elseif event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
         jsonrpc.broadcast("PlayerEnterUnit", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when any player relieves control of a unit to the AI.
     -- Initiator: The unit that the player left.
     elseif event.id == world.event.S_EVENT_PLAYER_LEAVE_UNIT then
-        json.broadcast("PlayerLeaveUnit", json:encode({
+        jsonrpc.broadcast("PlayerLeaveUnit", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_PLAYER_COMMENT then
-        json.broadcast("PlayerComment", json:encode({
+        jsonrpc.broadcast("PlayerComment", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     -- Occurs when any unit begins firing a weapon that has a high rate of fire. Most common with aircraft cannons (GAU-8), autocannons, and machine guns.
     -- Initiator: The unit that is doing the shooting
     -- Target: The unit that is being targeted.
     elseif event.id == world.event.S_EVENT_SHOOTING_START then
-        json.broadcast("ShootingStart", json:encode({
+        jsonrpc.broadcast("ShootingStart", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
-            target = event.target:getName(),
+            initiator = idAndName(event.initiator),
+            target = idAndName(event.target),
         }))
 
     -- Occurs when any unit stops firing its weapon. Event will always correspond with a shooting start event.
     -- Initiator: The unit that was doing the shooing.
     elseif event.id == world.event.S_EVENT_SHOOTING_END then
-        json.broadcast("ShootingEnd", json:encode({
+        jsonrpc.broadcast("ShootingEnd", json:encode({
             time = event.time,
-            initiator = event.initiator:getName(),
+            initiator = idAndName(event.initiator),
         }))
 
     end
@@ -411,4 +496,11 @@ function eventHandler:onEvent(event)
     -- unimplemented: S_EVENT_MARK_ADDED, S_EVENT_MARK_CHANGE, S_EVENT_MARK_REMOVED
 end
 
+local eventHandler = {}
+function eventHandler:onEvent(event)
+    local ok, err = pcall(onEvent, event)
+    if not ok then
+        env.info("[JSONRPC] Error in event handler: "..tostring(err))
+    end
+end
 world.addEventHandler(eventHandler)

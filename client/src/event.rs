@@ -1,9 +1,7 @@
 use std::fmt;
 
-use crate::airbase::Airbase;
 use crate::jsonrpc::Client;
-use crate::unit::Unit;
-use crate::weapon::Weapon;
+use crate::{Airbase, Identifier, Unit, Weapon};
 
 #[derive(Clone)]
 pub enum Object {
@@ -125,57 +123,63 @@ enum_number!(ObjectCategory {
 });
 
 #[derive(Clone, Deserialize)]
+pub(crate) struct ID {
+    id: usize,
+}
+
+#[derive(Clone, Deserialize)]
 pub(crate) struct RawTarget {
     category: ObjectCategory,
-    name: String,
+    id: usize,
+    name: Option<String>,
 }
 
 #[derive(Clone, Deserialize)]
 pub(crate) enum RawEvent {
     Shot {
         time: f64,
-        initiator: String,
-        weapon: String,
+        initiator: Identifier,
+        weapon: ID,
     },
     Hit {
         time: f64,
-        initiator: String,
-        weapon: String,
+        initiator: Identifier,
+        weapon: ID,
         target: RawTarget,
     },
     Takeoff {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
         place: String,
     },
     Land {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
         place: String,
     },
     Crash {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     Ejection {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     Refueling {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     Dead {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     PilotDead {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     BaseCapture {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
         place: String,
     },
     MissionStart {
@@ -186,47 +190,47 @@ pub(crate) enum RawEvent {
     },
     TakeControl {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     RefuelingStop {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     Birth {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     SystemFailure {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     EngineStartup {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     EngineShutdown {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     PlayerEnterUnit {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     PlayerLeaveUnit {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     PlayerComment {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     ShootingStart {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
     ShootingEnd {
         time: f64,
-        initiator: String,
+        initiator: Identifier,
     },
 }
 
@@ -240,7 +244,7 @@ impl RawEvent {
             } => Event::Shot {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
-                weapon: Weapon::new(client, weapon),
+                weapon: Weapon::new(client, weapon.id),
             },
             RawEvent::Hit {
                 time,
@@ -250,13 +254,13 @@ impl RawEvent {
             } => Event::Hit {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
-                weapon: Weapon::new(client.clone(), weapon),
+                weapon: Weapon::new(client.clone(), weapon.id),
                 target: match target.category {
-                    ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), target.name)),
+                    ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), target.id)),
                     ObjectCategory::Weapon => {
-                        Object::Weapon(Weapon::new(client.clone(), target.name))
+                        Object::Weapon(Weapon::new(client.clone(), target.id))
                     }
-                    ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), target.name)),
+                    ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), target.id)),
                     _ => unimplemented!(), // TODO
                 },
             },
@@ -366,75 +370,69 @@ impl fmt::Display for Event {
                 time,
                 initiator,
                 weapon,
-            } => write!(f, "[{}] Weapon {} fired by {}", time, weapon, initiator),
+            } => write!(f, "[{}] {} fired by {}", time, weapon, initiator),
             Hit {
                 time,
                 initiator,
                 weapon,
                 target,
-            } => write!(
-                f,
-                "[{}] Unit {} hit {} with {}",
-                time, initiator, target, weapon
-            ),
+            } => write!(f, "[{}] {} hit {} with {}", time, initiator, target, weapon),
             Takeoff {
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] Unit {} took off from {}", time, initiator, place),
+            } => write!(f, "[{}] {} took off from {}", time, initiator, place),
             Land {
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] Unit {} landed at {}", time, initiator, place),
-            Crash { time, initiator } => write!(f, "[{}] Unit {} crashed", time, initiator),
-            Ejection { time, initiator } => write!(f, "[{}] Unit {} ejected", time, initiator),
+            } => write!(f, "[{}] {} landed at {}", time, initiator, place),
+            Crash { time, initiator } => write!(f, "[{}] {} crashed", time, initiator),
+            Ejection { time, initiator } => write!(f, "[{}] {} ejected", time, initiator),
             Refueling { time, initiator } => {
-                write!(f, "[{}] Unit {} started refueling", time, initiator)
+                write!(f, "[{}] {} started refueling", time, initiator)
             }
-            Dead { time, initiator } => write!(f, "[{}] Unit {} died", time, initiator),
-            PilotDead { time, initiator } => {
-                write!(f, "[{}] Pilot of Unit {} died", time, initiator)
-            }
+            Dead { time, initiator } => write!(f, "[{}] {} died", time, initiator),
+            PilotDead { time, initiator } => write!(f, "[{}] Pilot of {} died", time, initiator),
             BaseCapture {
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] Unit {} captured {}", time, initiator, place),
+            } => write!(f, "[{}] {} captured {}", time, initiator, place),
             MissionStart { time } => write!(f, "[{}] Mission started", time),
             MissionEnd { time } => write!(f, "[{}] Mission ended", time),
             TakeControl { time, initiator } => {
                 write!(f, "[{}] A player took control of {}", time, initiator)
             }
             RefuelingStop { time, initiator } => {
-                write!(f, "[{}] Unit {} stopped refueling", time, initiator)
+                write!(f, "[{}] {} stopped refueling", time, initiator)
             }
             Birth { time, initiator } => write!(f, "[{}] Unit {} was born", time, initiator),
             SystemFailure { time, initiator } => write!(
                 f,
-                "[{}] Human-controlled unit {} has a system failure",
+                "[{}] Human-controlled {} has a system failure",
                 time, initiator
             ),
             EngineStartup { time, initiator } => {
-                write!(f, "[{}] Unit {} started its engine", time, initiator)
+                write!(f, "[{}] {} started its engine", time, initiator)
             }
             EngineShutdown { time, initiator } => {
-                write!(f, "[{}] Unit {} sthud down its engine", time, initiator)
+                write!(f, "[{}] {} shut down its engine", time, initiator)
             }
             PlayerEnterUnit { time, initiator } => {
-                write!(f, "[{}] A player entered unit {}", time, initiator)
+                write!(f, "[{}] A player entered {}", time, initiator)
             }
             PlayerLeaveUnit { time, initiator } => {
-                write!(f, "[{}] A player left unit {}", time, initiator)
+                write!(f, "[{}] A player left {}", time, initiator)
             }
             PlayerComment { time, initiator } => {
                 write!(f, "[{}] The player of {} commented", time, initiator)
             }
             ShootingStart { time, initiator } => {
-                write!(f, "[{}] Unit {} started shooting", time, initiator)
+                write!(f, "[{}] {} started shooting", time, initiator)
             }
             ShootingEnd { time, initiator } => {
-                write!(f, "[{}] Unit {} stopped shooting", time, initiator)
+                write!(f, "[{}] {} stopped shooting", time, initiator)
             }
         }
     }
