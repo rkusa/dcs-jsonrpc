@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{mem, thread};
 
 use crate::error::Error;
 use dcsjsonrpc_common::{Notification, Request, Response, RpcError, Version};
@@ -37,9 +37,10 @@ impl Server {
         thread::spawn(move || {
             tokio::run_async(
                 async move {
-                    let mut incoming = self::net::Incoming::new(listener, rx);
-                    let clients: Arc<Mutex<HashMap<usize, TcpStream>>> =
-                        Arc::new(Mutex::new(HashMap::new()));
+                    let mut incoming = Shutdownable::new(listener.incoming(), rx);
+                    let clients: Arc<
+                        Mutex<HashMap<usize, oneshot::Sender<()>>>,
+                    > = Arc::new(Mutex::new(HashMap::new()));
                     let mut next_ix = 1;
 
                     while let Some(stream) = await!(incoming.next()) {
@@ -51,36 +52,31 @@ impl Server {
                             }
                         };
 
-                        let handle = match stream.try_clone() {
-                            Ok(stream) => stream,
-                            Err(_) => continue,
-                        };
-
+                        // client shutdown channel
+                        let (tx, rx) = oneshot::channel();
                         let ix = next_ix;
                         next_ix += 1;
-                        clients.lock().unwrap().insert(ix, handle);
+                        clients.lock().unwrap().insert(ix, tx);
 
-                        {
-                            let clients = clients.clone();
-                            let queue = queue.clone();
-                            let subs = subs.clone();
-                            tokio::spawn_async(
-                                async move {
-                                    await!(handle_client(stream, queue, subs));
+                        let clients = clients.clone();
+                        let queue = queue.clone();
+                        let subs = subs.clone();
+                        tokio::spawn_async(
+                            async move {
+                                await!(handle_client(stream, queue, subs, rx));
 
-                                    clients.lock().unwrap().remove(&ix);
-                                },
-                            );
-                        }
+                                clients.lock().unwrap().remove(&ix);
+                            },
+                        );
                     }
 
-                    for (_, client) in clients.lock().unwrap().iter() {
-                        if let Err(err) = client.shutdown(std::net::Shutdown::Both) {
-                            error!("Error shutding down client connection: {}", err);
-                        }
+                    let mut clients = clients.lock().unwrap();
+                    let clients = mem::replace(&mut *clients, HashMap::new());
+                    for (_, client) in clients {
+                        let _ = client.send(()).unwrap();
                     }
 
-                    info!("TPC server shut down");
+                    info!("TCP server shut down");
                 },
             );
         });
@@ -125,11 +121,16 @@ impl Server {
     }
 }
 
-async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
+async fn handle_client(
+    stream: TcpStream,
+    queue: Queue,
+    subs: Subscriptions,
+    shutdown: oneshot::Receiver<()>,
+) {
     debug!("Client connected ...");
 
     let framed = Framed::new(stream, LinesCodec::new());
-    let (mut sink, mut stream) = framed.split();
+    let (mut sink, stream) = framed.split();
 
     let (mut tx, mut rx) = channel::<Outgoing>(128);
     tokio::spawn_async(
@@ -149,9 +150,12 @@ async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
                     }
                 }
             }
+
+            debug!("Client sending loop closed");
         },
     );
 
+    let mut stream = Shutdownable::new(stream, shutdown);
     while let Some(line) = await!(stream.next()) {
         let line = match line {
             Ok(line) => line,
@@ -305,47 +309,42 @@ fn error_response(tx: &mut Sender<Outgoing>, req: &mut Request, error: String) {
     }
 }
 
-mod net {
-    use std::io;
+#[must_use = "streams do nothing unless polled"]
+#[derive(Debug)]
+pub struct Shutdownable<S>
+where
+    S: Stream,
+{
+    inner: Box<S>,
+    shutdown: oneshot::Receiver<()>,
+}
 
-    use futures::sync::oneshot;
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::prelude::*;
-
-    #[must_use = "streams do nothing unless polled"]
-    #[derive(Debug)]
-    pub struct Incoming {
-        inner: TcpListener,
-        shutdown: oneshot::Receiver<()>,
-    }
-
-    impl Incoming {
-        pub(crate) fn new(listener: TcpListener, shutdown: oneshot::Receiver<()>) -> Incoming {
-            Incoming {
-                inner: listener,
-                shutdown,
-            }
+impl<S> Shutdownable<S>
+where
+    S: Stream,
+{
+    pub(crate) fn new(listener: S, shutdown: oneshot::Receiver<()>) -> Self {
+        Shutdownable {
+            inner: Box::new(listener),
+            shutdown,
         }
     }
+}
 
-    impl Stream for Incoming {
-        type Item = TcpStream;
-        type Error = io::Error;
+impl<S> Stream for Shutdownable<S>
+where
+    S: Stream,
+{
+    type Item = S::Item;
+    type Error = S::Error;
 
-        fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
-            use futures::Async;
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        use futures::Async;
 
-            if self.shutdown.poll() != Ok(Async::NotReady) {
-                return Ok(Async::Ready(None));
-            }
-
-            let (socket, _) = match self.inner.poll_accept() {
-                Ok(Async::Ready(t)) => t,
-                Ok(Async::NotReady) => return Ok(Async::NotReady),
-                Err(e) => return Err(e),
-            };
-
-            Ok(Async::Ready(Some(socket)))
+        if self.shutdown.poll() != Ok(Async::NotReady) {
+            return Ok(Async::Ready(None));
         }
+
+        self.inner.poll()
     }
 }

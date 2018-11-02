@@ -11,4 +11,7 @@ test_old: build
 example:
 	cd example && cargo run
 
-.PHONY: example
+repl:
+	cd repl && cargo run
+
+.PHONY: example repl

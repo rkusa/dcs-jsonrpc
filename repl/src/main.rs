@@ -3,7 +3,13 @@ use std::io::{self, BufRead};
 use dcsjsonrpc_client::{Client, Error};
 use serde_json::Value;
 
-fn main() -> Result<(), Error> {
+fn main() {
+    if let Err(err) = run() {
+        eprintln!("{}", err);
+    }
+}
+
+fn run() -> Result<(), Error> {
     let client = Client::connect("127.0.0.1:7777")?;
 
     let stdin = io::stdin();

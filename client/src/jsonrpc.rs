@@ -32,7 +32,7 @@ impl Client {
         let mut stream = TcpStream::connect(addr)?;
         stream.set_nodelay(true)?;
         let rd = stream.try_clone()?;
-        let mut rd = BufReader::new(rd);
+        let rd = BufReader::new(rd);
 
         let pending = Arc::new(Mutex::new(HashMap::new()));
         let subs = Arc::new(Mutex::new(Vec::new()));
@@ -44,56 +44,60 @@ impl Client {
             subscriptions: subs.clone(),
         };
 
-        thread::spawn(move || loop {
-            let mut line = String::new();
-            if let Err(err) = rd.read_line(&mut line) {
-                eprintln!("Error reading from TCP stream: {}", err);
-                break;
-            }
-
-            let res: Incoming = match serde_json::from_str(&line) {
-                Ok(res) => res,
-                Err(err) => {
-                    eprintln!(
-                        "Error deserializing response: {}\nRaw response: {}",
-                        err, line
-                    );
-                    continue;
-                }
-            };
-
-            match res {
-                Incoming::Response(res) => {
-                    let id = match res {
-                        Response::Success { ref id, .. } => id,
-                        Response::Error { ref id, .. } => id,
-                    };
-                    let mut pending = pending.lock().unwrap();
-                    if let Some(tx) = pending.remove(&id) {
-                        if let Err(err) = tx.send(res) {
-                            eprintln!("Error routing response: {}", err);
-                        }
-                    } else {
-                        eprintln!("No pending response for id {} found", id);
+        thread::spawn(move || {
+            for line in rd.lines() {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(err) => {
+                        eprintln!("Error reading from TCP stream: {}", err);
+                        break;
                     }
-                }
-                Incoming::Notification(Notification { method, params, .. }) => {
-                    if let Some(params) = params {
-                        let variant = method.to_camel_case();
-                        let mut map = serde_json::Map::new();
-                        map.insert(variant, params);
-                        let params = Value::Object(map);
+                };
 
-                        let event: RawEvent = match serde_json::from_value(params) {
-                            Ok(ev) => ev,
-                            Err(err) => {
-                                eprintln!("Error deserializing event: {}", err);
-                                continue;
-                            }
+                let res: Incoming = match serde_json::from_str(&line) {
+                    Ok(res) => res,
+                    Err(err) => {
+                        eprintln!(
+                            "Error deserializing response: {}\nRaw response: {}",
+                            err, line
+                        );
+                        continue;
+                    }
+                };
+
+                match res {
+                    Incoming::Response(res) => {
+                        let id = match res {
+                            Response::Success { ref id, .. } => id,
+                            Response::Error { ref id, .. } => id,
                         };
+                        let mut pending = pending.lock().unwrap();
+                        if let Some(tx) = pending.remove(&id) {
+                            if let Err(err) = tx.send(res) {
+                                eprintln!("Error routing response: {}", err);
+                            }
+                        } else {
+                            eprintln!("No pending response for id {} found", id);
+                        }
+                    }
+                    Incoming::Notification(Notification { method, params, .. }) => {
+                        if let Some(params) = params {
+                            let variant = method.to_camel_case();
+                            let mut map = serde_json::Map::new();
+                            map.insert(variant, params);
+                            let params = Value::Object(map);
 
-                        let mut subs = subs.lock().unwrap();
-                        subs.retain(|tx| tx.send(event.clone()).is_ok());
+                            let event: RawEvent = match serde_json::from_value(params) {
+                                Ok(ev) => ev,
+                                Err(err) => {
+                                    eprintln!("Error deserializing event: {}", err);
+                                    continue;
+                                }
+                            };
+
+                            let mut subs = subs.lock().unwrap();
+                            subs.retain(|tx| tx.send(event.clone()).is_ok());
+                        }
                     }
                 }
             }
