@@ -14,6 +14,12 @@ impl Weapon {
     }
 }
 
+impl fmt::Debug for Weapon {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Weapon {{ id: {} }}", self.id)
+    }
+}
+
 impl fmt::Display for Weapon {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Weapon {}", self.id)

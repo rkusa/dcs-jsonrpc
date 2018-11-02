@@ -147,6 +147,13 @@ Occurs when an aircraft connects with a tanker and begins taking on fuel.
 **Params:**
 - _initiator_: The unit that is receiving fuel.
 
+### [`RefuelingStop`](https://wiki.hoggitworld.com/view/DCS_event_refueling_stop)
+
+Occurs when an aircraft is finished taking fuel.
+
+**Params:**
+- _initiator_: The unit that was receiving fuel.
+
 ### [`Dead`](https://wiki.hoggitworld.com/view/DCS_event_dead)
 
 Occurs when an object is completely destroyed.
@@ -180,15 +187,6 @@ Occurs when a mission ends.
 
 **Params:**
 - _time_: the event's mission time
-
-### [`TookControl`](https://wiki.hoggitworld.com/view/DCS_event_took_control)
-
-### [`RefuelingStop`](https://wiki.hoggitworld.com/view/DCS_event_refueling_stop)
-
-Occurs when an aircraft is finished taking fuel.
-
-**Params:**
-- _initiator_: The unit that was receiving fuel.
 
 ### [`Birth`](https://wiki.hoggitworld.com/view/DCS_event_birth)
 
@@ -232,8 +230,6 @@ Occurs when any player relieves control of a unit to the AI.
 
 **Params:**
 - _initiator_: The unit that the player left.
-
-### [`PlayerComment`](https://wiki.hoggitworld.com/view/DCS_event_player_comment)
 
 ### [`ShootingStart`](https://wiki.hoggitworld.com/view/DCS_event_shooting_start)
 

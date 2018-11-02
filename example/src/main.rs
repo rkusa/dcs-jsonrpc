@@ -12,6 +12,7 @@ fn main() -> Result<(), Error> {
     println!("Listening to events:");
     for event in client.events()? {
         println!("{}", event);
+        println!("  {:?}", event);
     }
 
     Ok(())

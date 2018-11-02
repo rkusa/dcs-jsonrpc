@@ -4,15 +4,16 @@ use std::fmt;
 use crate::jsonrpc::Client;
 use crate::{Error, Identifier};
 
+/// Represents all objects placed on the map. Bridges, buildings, etc.
 #[derive(Clone)]
-pub struct Unit {
+pub struct Scenery {
     client: Client,
     id: Identifier,
 }
 
-impl Unit {
+impl Scenery {
     pub(crate) fn new<I: Into<Identifier>>(client: Client, id: I) -> Self {
-        Unit {
+        Scenery {
             client,
             id: id.into(),
         }
@@ -29,14 +30,14 @@ impl Unit {
     }
 }
 
-impl fmt::Debug for Unit {
+impl fmt::Debug for Scenery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Unit {{ id: {} }}", self.id)
+        write!(f, "Scenery {{ id: {} }}", self.id)
     }
 }
 
-impl fmt::Display for Unit {
+impl fmt::Display for Scenery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Unit {}", self.id)
+        write!(f, "Scenery {}", self.id)
     }
 }

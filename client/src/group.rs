@@ -242,6 +242,12 @@ impl Iterator for GroupIterator {
     }
 }
 
+impl fmt::Debug for Group {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Group {{ id: {} }}", self.id)
+    }
+}
+
 impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Group {}", self.id)

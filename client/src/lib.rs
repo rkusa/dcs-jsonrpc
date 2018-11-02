@@ -13,6 +13,8 @@ mod event;
 mod group;
 mod identifier;
 mod jsonrpc;
+mod scenery;
+mod staticobject;
 mod unit;
 mod weapon;
 
@@ -27,6 +29,8 @@ pub use self::event::Event;
 use self::event::RawEvent;
 pub use self::group::*;
 pub use self::identifier::Identifier;
+pub use self::scenery::Scenery;
+pub use self::staticobject::Static;
 pub use self::unit::Unit;
 pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;

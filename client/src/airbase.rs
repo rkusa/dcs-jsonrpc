@@ -29,6 +29,12 @@ impl Airbase {
     }
 }
 
+impl fmt::Debug for Airbase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Airbase {{ id: {} }}", self.id)
+    }
+}
+
 impl fmt::Display for Airbase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Airbase {}", self.id)

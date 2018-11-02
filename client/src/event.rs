@@ -1,114 +1,199 @@
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Airbase, Identifier, Unit, Weapon};
+use crate::{Airbase, Identifier, Scenery, Static, Unit, Weapon};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Object {
     Unit(Unit),
     Weapon(Weapon),
-    //    Static(Static),
-    //    Scenery(Scenery),
+    Static(Static),
+    Scenery(Scenery),
     Base(Airbase),
-    //    Cargo(Cargo),
+    Cargo(Static),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Event {
+    /// Occurs when a unit fires a weapon (but no machine gun- or autocannon-based weapons - those
+    /// are handled by [Event::ShootingStart]).
     Shot {
+        /// The event's mission time.
         time: f64,
+        /// The unit that fired the weapon.
         initiator: Unit,
+        /// The weapon that has been fired.
         weapon: Weapon,
     },
+
+    /// Occurs when an object is hit by a weapon.
     Hit {
+        /// The event's mission time.
         time: f64,
+        /// The unit that fired the weapon.
         initiator: Unit,
+        /// The weapon that the target has been hit with.
         weapon: Weapon,
+        /// The object that has been hit.
         target: Object,
     },
+
+    /// Occurs when an aircraft takes off from an airbase, farp, or ship.
     Takeoff {
+        /// The event's mission time.
         time: f64,
+        /// The unit that took off.
         initiator: Unit,
+        /// The airbase, farp or ship the unit took off from.
         place: Airbase,
     },
+
+    /// Occurs when an aircraft lands at an airbase, farp or ship.
     Land {
+        /// The event's mission time.
         time: f64,
+        /// The unit that landed.
         initiator: Unit,
+        /// The airbase, farp or ship the unit landed at.
         place: Airbase,
     },
+
+    /// Occurs when an aircraft crashes into the ground and is completely destroyed.
     Crash {
+        /// The event's mission time.
         time: f64,
+        /// The unit that crashed.
         initiator: Unit,
     },
+
+    /// Occurs when a pilot ejects from its aircraft.
     Ejection {
+        /// The event's mission time.
         time: f64,
+        /// The unit a pilot ejected from.
         initiator: Unit,
     },
+
+    /// Occurs when an aircraft connects with a tanker and begins taking on fuel.
     Refueling {
+        /// The event's mission time.
         time: f64,
+        /// The unit that is receiving fuel.
         initiator: Unit,
     },
+
+    /// Occurs when an aircraft is finished taking fuel.
+    RefuelingStop {
+        /// The event's mission time.
+        time: f64,
+        /// he unit that was receiving fuel.
+        initiator: Unit,
+    },
+
+    /// Occurs when an object is completely destroyed.
     Dead {
+        /// The event's mission time.
         time: f64,
+        /// The unit that has been destroyed.
         initiator: Unit,
     },
+
+    /// Occurs when a pilot of an aircraft is killed. Can occur either if the player is alive and
+    /// crashes (in this case both this and the [Event::Crash] event will be fired) or if a weapon
+    /// kills the pilot without completely destroying the plane.
     PilotDead {
+        /// The event's mission time.
         time: f64,
+        /// The unit the pilot has died in.
         initiator: Unit,
     },
+
+    /// Occurs when a ground unit captures either an airbase or a farp.
     BaseCapture {
+        /// The event's mission time.
         time: f64,
+        /// The unit that captured the base.
         initiator: Unit,
+        /// The airbase that was captured, can be a FARP or Airbase
         place: Airbase,
     },
+
+    /// Occurs when the mission starts.
     MissionStart {
+        /// The event's mission time.
         time: f64,
     },
+
+    /// Occurs when the mission stops.
     MissionEnd {
+        /// The event's mission time.
         time: f64,
     },
-    TakeControl {
-        time: f64,
-        initiator: Unit,
-    },
-    RefuelingStop {
-        time: f64,
-        initiator: Unit,
-    },
+
+    /// Occurs when any object is spawned into the mission.
     Birth {
+        /// The event's mission time.
+        /// Note: For the birth event, time will always be 0 (might be a DCS bug)
         time: f64,
+        /// The unit that was spawned.
         initiator: Unit,
     },
+
+    /// Occurs when a system fails on a human controlled aircraft occurs.
     SystemFailure {
+        /// The event's mission time.
         time: f64,
+        /// The unit the system failure occurred in.
         initiator: Unit,
     },
+
+    /// Occurs when any aircraft starts its engines.
     EngineStartup {
+        /// The event's mission time.
         time: f64,
+        /// The unit that starts its engines.
         initiator: Unit,
     },
+
+    /// Occurs when any aircraft shuts down its engines.
     EngineShutdown {
+        /// The event's mission time.
         time: f64,
+        /// The unit that shuts down its engines.
         initiator: Unit,
     },
+
+    /// Occurs when a player takes direct control of a unit.
     PlayerEnterUnit {
+        /// The event's mission time.
         time: f64,
+        /// The unit the player took control of.
         initiator: Unit,
     },
+
+    // Occurs when a player relieves direct control of a unit.
     PlayerLeaveUnit {
+        /// The event's mission time.
         time: f64,
+        /// The unit the player relieves control of.
         initiator: Unit,
     },
-    PlayerComment {
-        time: f64,
-        initiator: Unit,
-    },
+
+    /// Occurs when a unit begins firing a machine gun- or autocannon-based weapon (weapons with a
+    /// high rate of fire). Other weapons are handled by [Event::Shot].
     ShootingStart {
+        /// The event's mission time.
         time: f64,
+        /// The unit that started firing.
         initiator: Unit,
     },
+
+    /// Occurs when a unit stops firing a machine gun- or autocannon-based weapon. Event will always
+    /// correspond with a [Event::ShootingStart] event.
     ShootingEnd {
+        /// The event's mission time.
         time: f64,
+        /// The unit that was shooting and has no stopped firing.
         initiator: Unit,
     },
 }
@@ -141,93 +226,105 @@ pub(crate) enum RawEvent {
         initiator: Identifier,
         weapon: ID,
     },
+
     Hit {
         time: f64,
         initiator: Identifier,
         weapon: ID,
         target: RawTarget,
     },
+
     Takeoff {
         time: f64,
         initiator: Identifier,
-        place: String,
+        place: Identifier,
     },
+
     Land {
         time: f64,
         initiator: Identifier,
-        place: String,
+        place: Identifier,
     },
+
     Crash {
         time: f64,
         initiator: Identifier,
     },
+
     Ejection {
         time: f64,
         initiator: Identifier,
     },
+
     Refueling {
         time: f64,
         initiator: Identifier,
     },
+
     Dead {
         time: f64,
         initiator: Identifier,
     },
+
     PilotDead {
         time: f64,
         initiator: Identifier,
     },
+
     BaseCapture {
         time: f64,
         initiator: Identifier,
-        place: String,
+        place: Identifier,
     },
+
     MissionStart {
         time: f64,
     },
+
     MissionEnd {
         time: f64,
     },
-    TakeControl {
-        time: f64,
-        initiator: Identifier,
-    },
+
     RefuelingStop {
         time: f64,
         initiator: Identifier,
     },
+
     Birth {
         time: f64,
         initiator: Identifier,
     },
+
     SystemFailure {
         time: f64,
         initiator: Identifier,
     },
+
     EngineStartup {
         time: f64,
         initiator: Identifier,
     },
+
     EngineShutdown {
         time: f64,
         initiator: Identifier,
     },
+
     PlayerEnterUnit {
         time: f64,
         initiator: Identifier,
     },
+
     PlayerLeaveUnit {
         time: f64,
         initiator: Identifier,
     },
-    PlayerComment {
-        time: f64,
-        initiator: Identifier,
-    },
+
     ShootingStart {
         time: f64,
         initiator: Identifier,
     },
+
     ShootingEnd {
         time: f64,
         initiator: Identifier,
@@ -250,18 +347,29 @@ impl RawEvent {
                 time,
                 initiator,
                 weapon,
-                target,
+                mut target,
             } => Event::Hit {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
                 weapon: Weapon::new(client.clone(), weapon.id),
-                target: match target.category {
-                    ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), target.id)),
-                    ObjectCategory::Weapon => {
-                        Object::Weapon(Weapon::new(client.clone(), target.id))
+                target: {
+                    let id = target
+                        .name
+                        .take()
+                        .map(Identifier::Name)
+                        .unwrap_or_else(|| target.id.into());
+                    match target.category {
+                        ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), id)),
+                        ObjectCategory::Weapon => {
+                            Object::Weapon(Weapon::new(client.clone(), target.id))
+                        }
+                        ObjectCategory::Static => Object::Static(Static::new(client.clone(), id)),
+                        ObjectCategory::Scenery => {
+                            Object::Scenery(Scenery::new(client.clone(), id))
+                        }
+                        ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), id)),
+                        ObjectCategory::Cargo => Object::Cargo(Static::new(client.clone(), id)),
                     }
-                    ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), target.id)),
-                    _ => unimplemented!(), // TODO
                 },
             },
             RawEvent::Takeoff {
@@ -294,6 +402,10 @@ impl RawEvent {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
             },
+            RawEvent::RefuelingStop { time, initiator } => Event::RefuelingStop {
+                time,
+                initiator: Unit::new(client.clone(), initiator),
+            },
             RawEvent::Dead { time, initiator } => Event::Dead {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
@@ -313,14 +425,6 @@ impl RawEvent {
             },
             RawEvent::MissionStart { time } => Event::MissionStart { time },
             RawEvent::MissionEnd { time } => Event::MissionEnd { time },
-            RawEvent::TakeControl { time, initiator } => Event::TakeControl {
-                time,
-                initiator: Unit::new(client.clone(), initiator),
-            },
-            RawEvent::RefuelingStop { time, initiator } => Event::RefuelingStop {
-                time,
-                initiator: Unit::new(client.clone(), initiator),
-            },
             RawEvent::Birth { time, initiator } => Event::Birth {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
@@ -342,10 +446,6 @@ impl RawEvent {
                 initiator: Unit::new(client, initiator),
             },
             RawEvent::PlayerLeaveUnit { time, initiator } => Event::PlayerLeaveUnit {
-                time,
-                initiator: Unit::new(client.clone(), initiator),
-            },
-            RawEvent::PlayerComment { time, initiator } => Event::PlayerComment {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
             },
@@ -392,21 +492,17 @@ impl fmt::Display for Event {
             Refueling { time, initiator } => {
                 write!(f, "[{}] {} started refueling", time, initiator)
             }
+            RefuelingStop { time, initiator } => {
+                write!(f, "[{}] {} stopped refueling", time, initiator)
+            }
             Dead { time, initiator } => write!(f, "[{}] {} died", time, initiator),
             PilotDead { time, initiator } => write!(f, "[{}] Pilot of {} died", time, initiator),
             BaseCapture {
                 time,
-                initiator,
-                place,
+                initiator,                place,
             } => write!(f, "[{}] {} captured {}", time, initiator, place),
             MissionStart { time } => write!(f, "[{}] Mission started", time),
             MissionEnd { time } => write!(f, "[{}] Mission ended", time),
-            TakeControl { time, initiator } => {
-                write!(f, "[{}] A player took control of {}", time, initiator)
-            }
-            RefuelingStop { time, initiator } => {
-                write!(f, "[{}] {} stopped refueling", time, initiator)
-            }
             Birth { time, initiator } => write!(f, "[{}] Unit {} was born", time, initiator),
             SystemFailure { time, initiator } => write!(
                 f,
@@ -425,9 +521,6 @@ impl fmt::Display for Event {
             PlayerLeaveUnit { time, initiator } => {
                 write!(f, "[{}] A player left {}", time, initiator)
             }
-            PlayerComment { time, initiator } => {
-                write!(f, "[{}] The player of {} commented", time, initiator)
-            }
             ShootingStart { time, initiator } => {
                 write!(f, "[{}] {} started shooting", time, initiator)
             }
@@ -445,7 +538,10 @@ impl fmt::Display for Object {
         match self {
             Unit(o) => o.fmt(f),
             Weapon(o) => o.fmt(f),
+            Static(o) => o.fmt(f),
+            Scenery(o) => o.fmt(f),
             Base(o) => o.fmt(f),
+            Cargo(o) => o.fmt(f),
         }
     }
 }
