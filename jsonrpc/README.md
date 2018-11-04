@@ -25,7 +25,9 @@ Execute a given Lua code.
 << {"jsonrpc":"2.0","result":"42","id":1}
 ```
 
-### [`getGroups`](https://wiki.hoggitworld.com/view/DCS_func_getGroups)
+### Group Methods
+
+#### [`getGroups`](https://wiki.hoggitworld.com/view/DCS_func_getGroups)
 
 Get a list of all group names of the given coalition and category.
 
@@ -33,42 +35,49 @@ Get a list of all group names of the given coalition and category.
 - *coalition* (u8) - the coalition
 - [*category*] (u8) - the group category
 
-### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+#### [`groupName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
+
+Returns the group's name.
+
+**Params:**
+- *id* (int) - the id of the group
+
+#### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
 
 Return a boolean value based on whether the group currently exists in the mission.
 
 **Params:**
-- *name* (string) - the name of the group
+- *id* (int) or *name* (string) - the id or name of the group
 
-### [`groupCoalition`](https://wiki.hoggitworld.com/view/DCS_func_getCoalition)
+#### [`groupCoalition`](https://wiki.hoggitworld.com/view/DCS_func_getCoalition)
 
 Returns the group's coalition.
 
 **Params:**
-- *name* (string) - the name of the group
+- *id* (int) or *name* (string) - the id or name of the group
 
-### [`groupCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
+#### [`groupCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
 
 Returns the group's country.
 
 **Params:**
-- *name* (string) - the name of the group
+- *id* (int) or *name* (string) - the id or name of the group
 
-### [`groupCategory`](https://wiki.hoggitworld.com/view/DCS_func_getCategory)
+#### [`groupCategory`](https://wiki.hoggitworld.com/view/DCS_func_getCategory)
 
 Returns the group's category.
 
 **Params:**
-- *name* (string) - the name of the group
+- *id* (int) or *name* (string) - the id or name of the group
 
 ### `groupData`
 
 Returns the group data as defined in the mission editor. Result might be null, if the group was added later (and thus not defined in the mission editor).
 
 **Params:**
-- *name* (string) - the name of the group
+- *id* (int) or *name* (string) - the id or name of the group
 
-### [`addGroup`](https://wiki.hoggitworld.com/view/DCS_func_addGroup)
+#### [`addGroup`](https://wiki.hoggitworld.com/view/DCS_func_addGroup)
 
 Dynamically spawns a group of the specified category for the specified country. Group data table is in the same format as created by the mission editor. Returns the name of the newly created group.
 
@@ -77,12 +86,35 @@ Dynamically spawns a group of the specified category for the specified country. 
 - *category* (u8) - the group's category
 - *data* (u8) - the group data (same format as created by the mission editor)
 
-### [`groupActivate`](https://wiki.hoggitworld.com/view/DCS_func_activate)
+#### [`groupActivate`](https://wiki.hoggitworld.com/view/DCS_func_activate)
 
 Activates the group if the group has a delayed start or late activation.
 
 **Params:**
-- *name* (string) - the name of the group
+- *id* (int) or *name* (string) - the id or name of the group
+
+#### [`groupUnits`](https://wiki.hoggitworld.com/view/DCS_func_getUnits)
+
+Get a list of all unit names that are part of the given group.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the group
+
+### Unit Methods
+
+#### [`unitName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
+
+Returns the group's name.
+
+**Params:**
+- *id* (int) - the id of the group
+
+#### [`unitPosition`](https://wiki.hoggitworld.com/view/DCS_func_getPoint)
+
+Returns the unit's x, y, z position relative to the map's origin.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the unit
 
 ## Events
 

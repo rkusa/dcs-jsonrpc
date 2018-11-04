@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt;
 
 use crate::jsonrpc::Client;
+use crate::unit::UnitIterator;
 use crate::{Coalition, Country, Error, Identifier};
 use serde_json::Value;
 
@@ -60,6 +61,15 @@ impl Group {
     pub fn activate(&self) -> Result<(), Error> {
         self.client.notification("groupActivate", Some(&self.id))
     }
+
+    pub fn units(&self) -> Result<UnitIterator, Error> {
+        let unit_names: Vec<String> = self.client.request("groupUnits", Some(&self.id))?;
+
+        Ok(UnitIterator {
+            client: self.client.clone(),
+            unit_names,
+        })
+    }
 }
 
 pub struct GroupIterator {
@@ -67,7 +77,7 @@ pub struct GroupIterator {
     pub(crate) group_names: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupData {
     #[serde(rename = "groupId")]
     pub id: u64,
@@ -80,7 +90,7 @@ pub struct GroupData {
     pub radio_set: bool,
     pub route: RouteData,
     pub start_time: u64,
-    pub task: Task,
+    pub task: TaskKind,
     pub tasks: Value, // TODO
     pub uncontrolled: bool,
     pub units: Vec<UnitData>,
@@ -88,42 +98,126 @@ pub struct GroupData {
     pub y: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteData {
     pub points: Vec<PointData>,
 }
 
 // known unimplemented properties: airdromeId, helipadId, formation_template
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointData {
     #[serde(rename = "ETA")]
     pub eta: f64,
     #[serde(rename = "ETA_locked")]
     pub eta_locked: bool,
     pub action: WaypointAction,
-    pub alt: i64, // f64?
+    pub alt: f64,
     pub alt_type: AltitudeType,
     pub name: String,
-    pub properties: Value,
+    pub properties: Option<Value>,
     pub speed: f64,
     pub speed_locked: bool,
-    pub task: Value, // TODO: enum
+    pub task: Task,
     #[serde(rename = "type")]
     pub kind: WaypointType,
     pub x: f64,
     pub y: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "id")]
+pub enum Task {
+    ComboTask {
+        params: ComboTaskParams,
+    },
+    EngageTargets {
+        key: EngageTargetsKind,
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: EngageTargetsParams,
+    },
+    AttackGroup {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: AttackGroupParams,
+    },
+    AttackUnit {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: AttackUnitParams,
+    },
+    // e.g. RTB
+    WrappedAction {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: WrappedActionParams,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComboTaskParams {
+    tasks: Vec<Task>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EngageTargetsParams {
+    #[serde(rename = "targetTypes")]
+    target_types: Vec<TargetType>,
+    priority: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AttackGroupParams {
+    #[serde(rename = "weaponType")]
+    weapon_type: usize, // TODO: flags?
+    #[serde(rename = "groupId")]
+    group_id: usize, // TODO: directly provide Group type
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttackUnitParams {
+    altitude_enabled: bool,
+    unit_id: usize,
+    attack_qty_limit: bool,
+    attack_qty: usize,
+    expend: String, // TODO: enum
+    altitude: f64,
+    direction_enabled: bool,
+    group_attack: bool,
+    weapon_type: usize, // TODO: flags?
+    direction: usize,   // TODO
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WrappedActionParams {
+    action: Value, // TODO
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EngageTargetsKind {
+    AntiShip,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TargetType {
+    Ships,
+}
+
 // known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks, livery_id,
 // onboard_num, psi
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnitData {
     #[serde(rename = "unitId")]
     pub id: u64,
     #[serde(rename = "type")]
     pub kind: String, // TODO: enum?
     pub name: String,
-    pub alt: i64, // f64?
+    pub alt: f64,
     pub alt_type: AltitudeType,
     pub callsign: Value, // TODO: propper struct
     pub heading: f64,
@@ -134,7 +228,7 @@ pub struct UnitData {
     pub y: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Skill {
     Average,
     Client,
@@ -150,7 +244,7 @@ impl Default for Skill {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AltitudeType {
     #[serde(rename = "BARO")]
     Baro,
@@ -164,7 +258,7 @@ impl Default for AltitudeType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WaypointType {
     Land,
     TakeOff,
@@ -180,7 +274,7 @@ impl Default for WaypointType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WaypointAction {
     #[serde(rename = "Landing")]
     Land,
@@ -202,13 +296,13 @@ impl Default for WaypointAction {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Task {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TaskKind {
     #[serde(rename = "Nothing")]
     Nothing,
     #[serde(rename = "AFAC")]
     AFAC,
-    #[serde(rename = "Anti-ship Strike")]
+    #[serde(rename = "Antiship Strike")]
     AntiShipStrike,
     #[serde(rename = "AWACS")]
     AWACS,
@@ -226,9 +320,9 @@ pub enum Task {
     Intercept,
 }
 
-impl Default for Task {
+impl Default for TaskKind {
     fn default() -> Self {
-        Task::Nothing
+        TaskKind::Nothing
     }
 }
 

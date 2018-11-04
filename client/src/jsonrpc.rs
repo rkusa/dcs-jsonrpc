@@ -8,7 +8,6 @@ use std::thread;
 use crate::error::Error;
 use crate::event::RawEvent;
 use dcsjsonrpc_common::{Notification, Request, Response, Version, ID};
-use heck::CamelCase;
 use serde_json::Value;
 
 #[derive(Clone)]
@@ -82,9 +81,8 @@ impl Client {
                     }
                     Incoming::Notification(Notification { method, params, .. }) => {
                         if let Some(params) = params {
-                            let variant = method.to_camel_case();
                             let mut map = serde_json::Map::new();
-                            map.insert(variant, params);
+                            map.insert(method, params);
                             let params = Value::Object(map);
 
                             let event: RawEvent = match serde_json::from_value(params) {

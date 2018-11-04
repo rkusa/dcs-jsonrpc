@@ -499,7 +499,8 @@ impl fmt::Display for Event {
             PilotDead { time, initiator } => write!(f, "[{}] Pilot of {} died", time, initiator),
             BaseCapture {
                 time,
-                initiator,                place,
+                initiator,
+                place,
             } => write!(f, "[{}] {} captured {}", time, initiator, place),
             MissionStart { time } => write!(f, "[{}] Mission started", time),
             MissionEnd { time } => write!(f, "[{}] Mission ended", time),

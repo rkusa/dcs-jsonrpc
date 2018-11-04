@@ -120,7 +120,7 @@ function method_groupName(params)
     -- TODO: return error on missing params
     local group = groupByIdentifier(params)
     if group == nil then
-        return success(false)
+        return success(nil)
     else
         return success(group:getName())
     end
@@ -217,6 +217,18 @@ function method_groupActivate(params)
     return success("ok")
 end
 
+function method_groupUnits(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    local unitNames = {}
+    if group ~= nil then
+        for i, unit in pairs(group:getUnits()) do
+            unitNames[i] = unit:getName()
+        end
+    end
+    return success(unitNames)
+end
+
 --
 -- RPC Unit methods
 --
@@ -225,9 +237,19 @@ function method_unitName(params)
     -- TODO: return error on missing params
     local unit = unitByIdentifier(params)
     if unit == nil then
-        return success(false)
+        return success(nil)
     else
         return success(unit:getID())
+    end
+end
+
+function method_unitPosition(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(nil)
+    else
+        return success(unit:getPoint())
     end
 end
 
