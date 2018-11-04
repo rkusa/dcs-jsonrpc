@@ -21,6 +21,8 @@ mod weapon;
 
 use std::net::ToSocketAddrs;
 use std::sync::mpsc::{channel, Receiver};
+use std::thread;
+use std::time::{Duration, Instant};
 
 pub use self::airbase::Airbase;
 pub use self::coalition::Coalition;
@@ -48,8 +50,13 @@ impl Client {
         })
     }
 
-    pub fn group(&self, name: &str) -> Group {
-        Group::new(self.client.clone(), name)
+    pub fn group(&self, name: &str) -> Result<Group, Error> {
+        let group = Group::new(self.client.clone(), name);
+        if group.exists()? {
+            Ok(group)
+        } else {
+            Err(Error::GroupGone(Identifier::Name(name.to_string())))
+        }
     }
 
     pub fn groups(
@@ -101,7 +108,16 @@ impl Client {
             }),
         )?;
 
-        Ok(Group::new(self.client.clone(), name))
+        let group = Group::new(self.client.clone(), name);
+        let started = Instant::now();
+        while !group.exists()? {
+            if started.elapsed() > Duration::from_secs(1) {
+                return Err(Error::AddGroupTimeout);
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        Ok(group)
     }
 
     pub fn events(&self) -> Result<EventsIterator, Error> {

@@ -18,18 +18,24 @@ impl Unit {
         }
     }
 
+    fn request<R>(&self, method: &str) -> Result<R, Error>
+    where
+        for<'de> R: serde::Deserialize<'de>,
+    {
+        self.client
+            .request::<_, Option<R>>(method, Some(&self.id))?
+            .ok_or_else(|| Error::GroupGone(self.id.clone()))
+    }
+
     pub fn name(&self) -> Result<Cow<'_, str>, Error> {
         match self.id {
-            Identifier::ID(_) => self
-                .client
-                .request("unitName", Some(&self.id))
-                .map(Cow::Owned),
+            Identifier::ID(_) => self.request("unitName").map(Cow::Owned),
             Identifier::Name(ref name) => Ok(Cow::Borrowed(name)),
         }
     }
 
-    pub fn position(&self) -> Result<Option<Position>, Error> {
-        self.client.request("unitPosition", Some(&self.id))
+    pub fn position(&self) -> Result<Position, Error> {
+        self.request("unitPosition")
     }
 }
 

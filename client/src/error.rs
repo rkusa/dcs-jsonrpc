@@ -1,5 +1,7 @@
 use std::{error, fmt};
 
+use crate::identifier::Identifier;
+
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
@@ -7,14 +9,18 @@ pub enum Error {
     Send(std::sync::mpsc::SendError<std::vec::Vec<u8>>),
     Json(serde_json::Error),
     Rpc(dcsjsonrpc_common::RpcError),
+    GroupGone(Identifier),
+    UnitGone(Identifier),
+    AddGroupTimeout,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        //        use self::Error::*;
+        use self::Error::*;
         use std::error::Error;
 
         match self {
+            GroupGone(ref id) | UnitGone(ref id) => write!(f, "{} does not exist anymore", id)?,
             _ => write!(f, "Error: {}", self.description())?,
         }
 
@@ -38,6 +44,11 @@ impl error::Error for Error {
             Send(_) => "Error sending to channel",
             Json(_) => "Error serializing or deserializing JSON",
             Rpc(ref err) => err.description(),
+            GroupGone(_) => "Group does not exist anymore",
+            UnitGone(_) => "Unit does not exist anymore",
+            AddGroupTimeout => {
+                "A newly added group did not exist 1 second after its supposed spawn"
+            }
         }
     }
 
@@ -50,7 +61,7 @@ impl error::Error for Error {
             Send(ref err) => Some(err),
             Json(ref err) => Some(err),
             Rpc(ref err) => Some(err),
-            //            _ => None,
+            _ => None,
         }
     }
 }

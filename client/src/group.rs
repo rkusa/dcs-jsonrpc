@@ -28,12 +28,18 @@ impl Group {
         }
     }
 
+    fn request<R>(&self, method: &str) -> Result<R, Error>
+    where
+        for<'de> R: serde::Deserialize<'de>,
+    {
+        self.client
+            .request::<_, Option<R>>(method, Some(&self.id))?
+            .ok_or_else(|| Error::GroupGone(self.id.clone()))
+    }
+
     pub fn name(&self) -> Result<Cow<'_, str>, Error> {
         match self.id {
-            Identifier::ID(_) => self
-                .client
-                .request("groupName", Some(&self.id))
-                .map(Cow::Owned),
+            Identifier::ID(_) => self.request("groupName").map(Cow::Owned),
             Identifier::Name(ref name) => Ok(Cow::Borrowed(name)),
         }
     }
@@ -46,16 +52,16 @@ impl Group {
         self.client.request("groupData", Some(&self.id))
     }
 
-    pub fn coalition(&self) -> Result<Option<Coalition>, Error> {
-        self.client.request("groupCoalition", Some(&self.id))
+    pub fn coalition(&self) -> Result<Coalition, Error> {
+        self.request("groupCoalition")
     }
 
-    pub fn country(&self) -> Result<Option<Country>, Error> {
-        self.client.request("groupCountry", Some(&self.id))
+    pub fn country(&self) -> Result<Country, Error> {
+        self.request("groupCountry")
     }
 
-    pub fn category(&self) -> Result<Option<GroupCategory>, Error> {
-        self.client.request("groupCategory", Some(&self.id))
+    pub fn category(&self) -> Result<GroupCategory, Error> {
+        self.request("groupCategory")
     }
 
     pub fn activate(&self) -> Result<(), Error> {
