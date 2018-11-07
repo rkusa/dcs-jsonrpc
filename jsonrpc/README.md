@@ -278,6 +278,27 @@ Occurs when any unit stops firing its weapon. Event will always correspond with 
 **Params:**
 - _initiator_: The unit that was doing the shooing.
 
+### [`MarkAdd`](https://wiki.hoggitworld.com/view/DCS_event_mark_added)
+
+Occurs when mark panels get added to the mission by players or scripting functions.
+
+**Params:**
+TODO
+
+### [`MarkChange`](https://wiki.hoggitworld.com/view/DCS_event_mark_change)
+
+Occurs when a mark panel is modified by a player.
+
+**Params:**
+TODO
+
+### [`MarkRemove`](https://wiki.hoggitworld.com/view/DCS_event_mark_remove)
+
+Occurs when mark panels get removed from the mission by players or scripting functions.
+
+**Params:**
+TODO
+
 
 
 

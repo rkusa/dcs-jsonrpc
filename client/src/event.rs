@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Airbase, Identifier, Scenery, Static, Unit, Weapon};
+use crate::{Airbase, Coalition, Identifier, Position, Scenery, Static, Unit, Weapon};
 
 #[derive(Debug, Clone)]
 pub enum Object {
@@ -196,6 +196,60 @@ pub enum Event {
         /// The unit that was shooting and has no stopped firing.
         initiator: Unit,
     },
+
+    /// Occurs when marks get added to the mission by players or scripting functions.
+    MarkAdd {
+        /// The event's mission time.
+        time: f64,
+        /// The group the mark's visibility is restricted for.
+        group_id: u64,
+        /// The coalition the mark's visibility is restricted for.
+        coalition: Coalition,
+        /// The mark's id.
+        id: usize,
+        /// The unit that added the mark.
+        initiator: Option<Unit>,
+        /// The position the mark has been added at.
+        pos: Position,
+        /// The mark's label.
+        text: String,
+    },
+
+    /// Occurs when marks get edited.
+    MarkChange {
+        /// The event's mission time.
+        time: f64,
+        /// The group the mark's visibility is restricted for.
+        group_id: u64,
+        /// The coalition the mark's visibility is restricted for.
+        coalition: Coalition,
+        /// The mark's id.
+        id: usize,
+        /// The unit that added the mark.
+        initiator: Option<Unit>,
+        /// The position the mark has been added at.
+        pos: Position,
+        /// The mark's label.
+        text: String,
+    },
+
+    /// Occurs when marks get removed.
+    MarkRemove {
+        /// The event's mission time.
+        time: f64,
+        /// The group the mark's visibility is restricted for.
+        group_id: u64,
+        /// The coalition the mark's visibility is restricted for.
+        coalition: Coalition,
+        /// The mark's id.
+        id: usize,
+        /// The unit that added the mark.
+        initiator: Option<Unit>,
+        /// The position the mark has been added at.
+        pos: Position,
+        /// The mark's label.
+        text: String,
+    },
 }
 
 enum_number!(ObjectCategory {
@@ -329,6 +383,39 @@ pub(crate) enum RawEvent {
         time: f64,
         initiator: Identifier,
     },
+
+    MarkAdd {
+        time: f64,
+        #[serde(rename = "groupId")]
+        group_id: u64,
+        coalition: Coalition,
+        id: usize,
+        initiator: Option<Identifier>,
+        pos: Position,
+        text: String,
+    },
+
+    MarkChange {
+        time: f64,
+        #[serde(rename = "groupId")]
+        group_id: u64,
+        coalition: Coalition,
+        id: usize,
+        initiator: Option<Identifier>,
+        pos: Position,
+        text: String,
+    },
+
+    MarkRemove {
+        time: f64,
+        #[serde(rename = "groupId")]
+        group_id: u64,
+        coalition: Coalition,
+        id: usize,
+        initiator: Option<Identifier>,
+        pos: Position,
+        text: String,
+    },
 }
 
 impl RawEvent {
@@ -457,6 +544,57 @@ impl RawEvent {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
             },
+            RawEvent::MarkAdd {
+                time,
+                group_id,
+                coalition,
+                id,
+                initiator,
+                pos,
+                text,
+            } => Event::MarkAdd {
+                time,
+                group_id,
+                coalition,
+                id,
+                initiator: initiator.map(|id| Unit::new(client.clone(), id)),
+                pos,
+                text,
+            },
+            RawEvent::MarkChange {
+                time,
+                group_id,
+                coalition,
+                id,
+                initiator,
+                pos,
+                text,
+            } => Event::MarkChange {
+                time,
+                group_id,
+                coalition,
+                id,
+                initiator: initiator.map(|id| Unit::new(client.clone(), id)),
+                pos,
+                text,
+            },
+            RawEvent::MarkRemove {
+                time,
+                group_id,
+                coalition,
+                id,
+                initiator,
+                pos,
+                text,
+            } => Event::MarkRemove {
+                time,
+                group_id,
+                coalition,
+                id,
+                initiator: initiator.map(|id| Unit::new(client.clone(), id)),
+                pos,
+                text,
+            },
         }
     }
 }
@@ -528,6 +666,15 @@ impl fmt::Display for Event {
             ShootingEnd { time, initiator } => {
                 write!(f, "[{}] {} stopped shooting", time, initiator)
             }
+            MarkAdd {
+                time, text, pos, ..
+            } => write!(f, "[{}] A mark has been added at {}: {}", time, pos, text),
+            MarkChange {
+                time, text, pos, ..
+            } => write!(f, "[{}] A mark has been changed at {}: {}", time, pos, text),
+            MarkRemove {
+                time, text, pos, ..
+            } => write!(f, "[{}] A mark has been removed at {}: {}", time, pos, text),
         }
     }
 }

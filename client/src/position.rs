@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// A position in 3D space relative to the map origin.
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Position {
     pub x: f64,
     #[serde(rename = "z")]

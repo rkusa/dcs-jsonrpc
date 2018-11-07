@@ -459,9 +459,45 @@ function onEvent(event)
             initiator = idAndName(event.initiator),
         }))
 
+    elseif event.id == world.event.S_EVENT_MARK_ADDED then
+        jsonrpc.broadcast("MarkAdd", json:encode({
+            time = event.time,
+            groupId = event.groupID,
+            coalition = event.coalition,
+            id = event.id,
+            initiator = idAndName(event.initiator),
+            pos = event.pos,
+            text = event.text,
+            -- ignored: idx, groupID
+        }))
+
+    elseif event.id == world.event.S_EVENT_MARK_CHANGE then
+        jsonrpc.broadcast("MarkChange", json:encode({
+            time = event.time,
+            groupId = event.groupID,
+            coalition = event.coalition,
+            id = event.id,
+            initiator = idAndName(event.initiator),
+            pos = event.pos,
+            text = event.text,
+            -- ignored: idx, groupID
+        }))
+
+    elseif event.id == world.event.S_EVENT_MARK_REMOVED then
+        jsonrpc.broadcast("MarkRemove", json:encode({
+            time = event.time,
+            groupId = event.groupID,
+            coalition = event.coalition,
+            id = event.id,
+            initiator = idAndName(event.initiator),
+            pos = event.pos,
+            text = event.text,
+            -- ignored: idx, groupID
+        }))
+
     end
 
-    -- unimplemented: S_EVENT_MARK_ADDED, S_EVENT_MARK_CHANGE, S_EVENT_MARK_REMOVED
+    env.info("[JSONRPC] Event: "..inspect(event))
 end
 
 local eventHandler = {}
