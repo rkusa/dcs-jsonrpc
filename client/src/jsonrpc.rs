@@ -104,7 +104,7 @@ impl Client {
         thread::spawn(move || {
             let mut forwad = || -> Result<(), Error> {
                 let mut data = rx.recv()?;
-                data.push(b'\n' as u8);
+                data.push(b'\n');
                 stream.write_all(&data)?;
                 Ok(())
             };

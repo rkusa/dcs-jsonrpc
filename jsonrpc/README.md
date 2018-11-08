@@ -11,6 +11,13 @@ Displays the passed string of text for the specified time to all players.
 - *displayTime* (number) - the amount of seconds the message should be displayed
 - *clearView* (boolean) - defines whether or not to use the old message display format
 
+### [`removeMark`](https://wiki.hoggitworld.com/view/DCS_func_removeMark)
+
+Removes a mark panel from the f10 map
+
+**Params:**
+- *id* (number) - the id of the mark that should be removed
+
 ### `execute`
 
 Execute a given Lua code.

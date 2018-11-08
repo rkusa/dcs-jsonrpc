@@ -50,6 +50,40 @@ impl Client {
         })
     }
 
+    /// Displays the given `text` to all players for `display_time` seconds. `clear_view` defines
+    /// whether existing messages will be overwritten (`true`) or whether the new message is
+    /// stacked to existing ones (`false`).
+    pub fn out_text(&self, text: &str, display_time: usize, clear_view: bool) -> Result<(), Error> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Params<'a> {
+            text: &'a str,
+            display_time: usize,
+            clear_view: bool,
+        }
+
+        self.client.notification(
+            "outText",
+            Some(Params {
+                text,
+                display_time,
+                clear_view,
+            }),
+        )
+    }
+
+    /// Removes the marker identified with `id` from the F10 map.
+    pub fn remove_mark(&self, id: usize) -> Result<(), Error> {
+        #[derive(Serialize)]
+        struct Params {
+            id: usize,
+        }
+
+        self.client.notification("removeMark", Some(Params { id }))
+    }
+
+    /// Instantiates the group that is identified with the given `name` (group names are unique).
+    /// The group must exist, otherwise an [Error::GroupGone] error is returned.
     pub fn group(&self, name: &str) -> Result<Group, Error> {
         let group = Group::new(self.client.clone(), name);
         if group.exists()? {
@@ -59,6 +93,7 @@ impl Client {
         }
     }
 
+    /// Returns an iterator that yields all groups for the given `coalition` and `category`.
     pub fn groups(
         &self,
         coalition: Coalition,
@@ -85,6 +120,7 @@ impl Client {
         })
     }
 
+    /// Adds a new group to the mission.
     pub fn add_group(
         &self,
         country: Country,
@@ -120,6 +156,7 @@ impl Client {
         Ok(group)
     }
 
+    /// Returns an endless iterator that will yield all future mission events.
     pub fn events(&self) -> Result<EventsIterator, Error> {
         let (tx, rx) = channel::<RawEvent>();
         self.client.add_subscription(tx);
@@ -132,6 +169,7 @@ impl Client {
         })
     }
 
+    /// Execute the given `lua` code within the mission environment.
     pub fn execute<R>(&self, lua: &str) -> Result<R, Error>
     where
         for<'de> R: serde::Deserialize<'de>,

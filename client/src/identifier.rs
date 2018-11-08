@@ -42,7 +42,7 @@ impl<'de> ::serde::Deserialize<'de> for Identifier {
     {
         struct Visitor;
 
-        const FIELDS: &'static [&'static str] = &["id", "name"];
+        const FIELDS: &[&str] = &["id", "name"];
 
         impl<'de> ::serde::de::Visitor<'de> for Visitor {
             type Value = Identifier;

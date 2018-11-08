@@ -310,6 +310,9 @@ end, nil, timer.getTime() + .1)
 -- listen to DCS events
 --
 function idAndName(obj)
+    if obj == nil then
+        return nil
+    end
     local result = {
         id = tonumber(obj:getID()),
     }
@@ -462,8 +465,8 @@ function onEvent(event)
     elseif event.id == world.event.S_EVENT_MARK_ADDED then
         jsonrpc.broadcast("MarkAdd", json:encode({
             time = event.time,
-            groupId = event.groupID,
-            coalition = event.coalition,
+            groupId = event.groupID > -1 and event.groupID or nil,
+            coalition = event.coalition > -1 and event.coalition or nil,
             id = event.id,
             initiator = idAndName(event.initiator),
             pos = event.pos,
@@ -474,8 +477,8 @@ function onEvent(event)
     elseif event.id == world.event.S_EVENT_MARK_CHANGE then
         jsonrpc.broadcast("MarkChange", json:encode({
             time = event.time,
-            groupId = event.groupID,
-            coalition = event.coalition,
+            groupId = event.groupID > -1 and event.groupID or nil,
+            coalition = event.coalition > -1 and event.coalition or nil,
             id = event.id,
             initiator = idAndName(event.initiator),
             pos = event.pos,
@@ -486,8 +489,8 @@ function onEvent(event)
     elseif event.id == world.event.S_EVENT_MARK_REMOVED then
         jsonrpc.broadcast("MarkRemove", json:encode({
             time = event.time,
-            groupId = event.groupID,
-            coalition = event.coalition,
+            groupId = event.groupID > -1 and event.groupID or nil,
+            coalition = event.coalition > -1 and event.coalition or nil,
             id = event.id,
             initiator = idAndName(event.initiator),
             pos = event.pos,

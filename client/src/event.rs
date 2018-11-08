@@ -202,9 +202,9 @@ pub enum Event {
         /// The event's mission time.
         time: f64,
         /// The group the mark's visibility is restricted for.
-        group_id: u64,
+        group_id: Option<u64>,
         /// The coalition the mark's visibility is restricted for.
-        coalition: Coalition,
+        coalition: Option<Coalition>,
         /// The mark's id.
         id: usize,
         /// The unit that added the mark.
@@ -220,9 +220,9 @@ pub enum Event {
         /// The event's mission time.
         time: f64,
         /// The group the mark's visibility is restricted for.
-        group_id: u64,
+        group_id: Option<u64>,
         /// The coalition the mark's visibility is restricted for.
-        coalition: Coalition,
+        coalition: Option<Coalition>,
         /// The mark's id.
         id: usize,
         /// The unit that added the mark.
@@ -238,9 +238,9 @@ pub enum Event {
         /// The event's mission time.
         time: f64,
         /// The group the mark's visibility is restricted for.
-        group_id: u64,
+        group_id: Option<u64>,
         /// The coalition the mark's visibility is restricted for.
-        coalition: Coalition,
+        coalition: Option<Coalition>,
         /// The mark's id.
         id: usize,
         /// The unit that added the mark.
@@ -387,8 +387,8 @@ pub(crate) enum RawEvent {
     MarkAdd {
         time: f64,
         #[serde(rename = "groupId")]
-        group_id: u64,
-        coalition: Coalition,
+        group_id: Option<u64>,
+        coalition: Option<Coalition>,
         id: usize,
         initiator: Option<Identifier>,
         pos: Position,
@@ -398,8 +398,8 @@ pub(crate) enum RawEvent {
     MarkChange {
         time: f64,
         #[serde(rename = "groupId")]
-        group_id: u64,
-        coalition: Coalition,
+        group_id: Option<u64>,
+        coalition: Option<Coalition>,
         id: usize,
         initiator: Option<Identifier>,
         pos: Position,
@@ -409,8 +409,8 @@ pub(crate) enum RawEvent {
     MarkRemove {
         time: f64,
         #[serde(rename = "groupId")]
-        group_id: u64,
-        coalition: Coalition,
+        group_id: Option<u64>,
+        coalition: Option<Coalition>,
         id: usize,
         initiator: Option<Identifier>,
         pos: Position,

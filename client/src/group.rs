@@ -48,7 +48,7 @@ impl Group {
         self.client.request("groupExists", Some(&self.id))
     }
 
-    pub fn group_data(&self) -> Result<Option<GroupData>, Error> {
+    pub fn data(&self) -> Result<Option<GroupData>, Error> {
         self.client.request("groupData", Some(&self.id))
     }
 
