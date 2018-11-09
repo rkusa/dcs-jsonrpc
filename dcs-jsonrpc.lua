@@ -103,6 +103,13 @@ function method_outText(params)
     return nil
 end
 
+function method_removeMark(params)
+    -- TODO: return error on missing params
+    trigger.action.removeMark(params.id)
+
+    return nil
+end
+
 --
 -- RPC Group methods
 --
@@ -150,13 +157,16 @@ function method_groupData(params)
         countries = env.mission.coalition.blue.country
     end
 
-    local country = group:getUnit(1):getCountry()
     local id = group:getID()
     for _, countryData in pairs(countries) do
         if type(countryData) == 'table' and type(countryData.plane) == 'table' and type(countryData.plane.group) == 'table' then
-            for _, groupData in pairs(countryData.plane.group) do
-                if groupData.groupId == id then
-                    return success(groupData)
+            for _, category in pairs(countryData) do
+                if type(category) == 'table' and type(category.group) == 'table' then
+                    for _, groupData in pairs(category.group) do
+                        if groupData.groupId == id then
+                            return success(groupData)
+                        end
+                    end
                 end
             end
         end
@@ -467,9 +477,10 @@ function onEvent(event)
             time = event.time,
             groupId = event.groupID > -1 and event.groupID or nil,
             coalition = event.coalition > -1 and event.coalition or nil,
-            id = event.id,
+            id = event.idx,
             initiator = idAndName(event.initiator),
-            pos = event.pos,
+            -- x and z are rotated here compared to group/unit coords
+            pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
             -- ignored: idx, groupID
         }))
@@ -479,9 +490,10 @@ function onEvent(event)
             time = event.time,
             groupId = event.groupID > -1 and event.groupID or nil,
             coalition = event.coalition > -1 and event.coalition or nil,
-            id = event.id,
+            id = event.idx,
             initiator = idAndName(event.initiator),
-            pos = event.pos,
+            -- x and z are rotated here compared to group/unit coords
+            pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
             -- ignored: idx, groupID
         }))
@@ -491,9 +503,10 @@ function onEvent(event)
             time = event.time,
             groupId = event.groupID > -1 and event.groupID or nil,
             coalition = event.coalition > -1 and event.coalition or nil,
-            id = event.id,
+            id = event.idx,
             initiator = idAndName(event.initiator),
-            pos = event.pos,
+            -- x and z are rotated here compared to group/unit coords
+            pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
             -- ignored: idx, groupID
         }))

@@ -84,7 +84,15 @@ pub struct GroupIterator {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GroupData {
+#[serde(untagged)]
+pub enum GroupData {
+    Aircraft(AircraftGroupData),
+    Ground(GroundGroupData),
+    Static(StaticGroupData),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AircraftGroupData {
     #[serde(rename = "groupId")]
     pub id: u64,
     pub communication: bool,
@@ -92,14 +100,48 @@ pub struct GroupData {
     pub hidden: bool,
     pub modulation: i64,
     pub name: String,
-    #[serde(rename = "radioSet")]
-    pub radio_set: bool,
     pub route: RouteData,
     pub start_time: u64,
     pub task: TaskKind,
     pub tasks: Value, // TODO
     pub uncontrolled: bool,
     pub units: Vec<UnitData>,
+    pub x: f64,
+    pub y: f64,
+    //    #[serde(rename = "radioSet")]
+    //    pub radio_set: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroundGroupData {
+    #[serde(rename = "groupId")]
+    pub id: u64,
+    pub hidden: bool,
+    pub name: String,
+    pub route: RouteData,
+    pub start_time: u64,
+    // while task is set for vehicles, it is only set to "Ground Nothing", so we will ignore it here
+    // to have one struct that works for both vehicles and ships
+    // pub task: TaskKind,
+    pub tasks: Value, // TODO
+    pub uncontrollable: bool,
+    pub units: Vec<UnitData>,
+    pub visible: bool,
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StaticGroupData {
+    #[serde(rename = "groupId")]
+    pub id: u64,
+    pub name: String,
+    pub route: RouteData,
+    pub units: Vec<UnitData>,
+    pub heading: u64,
+    #[serde(rename = "linkOffset")]
+    pub link_offset: bool,
+    pub dead: bool,
     pub x: f64,
     pub y: f64,
 }
@@ -128,6 +170,7 @@ pub struct PointData {
     pub kind: WaypointType,
     pub x: f64,
     pub y: f64,
+    // TODO: linkUnit for statics
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,6 +204,12 @@ pub enum Task {
         number: usize,
         auto: bool,
         params: WrappedActionParams,
+    },
+    FAC {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: Value, // TODO
     },
 }
 
@@ -223,12 +272,17 @@ pub struct UnitData {
     #[serde(rename = "type")]
     pub kind: String, // TODO: enum?
     pub name: String,
+    #[serde(default)]
     pub alt: f64,
+    #[serde(default)]
     pub alt_type: AltitudeType,
-    pub callsign: Value, // TODO: propper struct
+    // statics do not have a callsign
+    pub callsign: Option<Value>, // TODO: propper struct
+    #[serde(default)]
     pub heading: f64,
-    pub payload: Value, // TODO
-    pub skill: Skill,
+    pub payload: Option<Value>, // TODO
+    pub skill: Option<Skill>,
+    #[serde(default)]
     pub speed: f64,
     pub x: f64,
     pub y: f64,
@@ -294,6 +348,8 @@ pub enum WaypointAction {
     TurningPoint,
     #[serde(rename = "Fly Over Point")]
     FlyOverPoint,
+    #[serde(rename = "Off Road")]
+    OffRoad,
 }
 
 impl Default for WaypointAction {
@@ -324,6 +380,8 @@ pub enum TaskKind {
     GroundAttack,
     #[serde(rename = "Intercept")]
     Intercept,
+    #[serde(rename = "Ground Nothing")]
+    GroundNothing,
 }
 
 impl Default for TaskKind {

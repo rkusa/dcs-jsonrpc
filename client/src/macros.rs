@@ -10,8 +10,8 @@ macro_rules! enum_number {
             where
                 S: ::serde::Serializer,
             {
-                // Serialize the enum as a i64.
-                serializer.serialize_i64(*self as i64)
+                // Serialize the enum as a u64.
+                serializer.serialize_u64(*self as u64)
             }
         }
 
@@ -29,7 +29,7 @@ macro_rules! enum_number {
                         formatter.write_str("positive integer")
                     }
 
-                    fn visit_i64<E>(self, value: i64) -> Result<$name, E>
+                    fn visit_u64<E>(self, value: u64) -> Result<$name, E>
                     where
                         E: ::serde::de::Error,
                     {
@@ -44,8 +44,8 @@ macro_rules! enum_number {
                     }
                 }
 
-                // Deserialize the enum from a i64.
-                deserializer.deserialize_i64(Visitor)
+                // Deserialize the enum from a u64.
+                deserializer.deserialize_u64(Visitor)
             }
         }
     }

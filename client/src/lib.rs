@@ -134,7 +134,11 @@ impl Client {
             data: GroupData,
         }
 
-        let name = data.name.clone();
+        let name = match data {
+            GroupData::Aircraft(AircraftGroupData { ref name, .. })
+            | GroupData::Ground(GroundGroupData { ref name, .. })
+            | GroupData::Static(StaticGroupData { ref name, .. }) => name.clone(),
+        };
         self.client.notification(
             "addGroup",
             Some(Params {
