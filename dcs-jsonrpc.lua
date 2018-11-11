@@ -123,6 +123,16 @@ function method_getGroups(params)
     return success(names)
 end
 
+function method_groupID(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    if group == nil then
+        return success(nil)
+    else
+        return success(group:getID())
+    end
+end
+
 function method_groupName(params)
     -- TODO: return error on missing params
     local group = groupByIdentifier(params)
@@ -264,6 +274,81 @@ function method_unitPosition(params)
 end
 
 --
+-- RPC Mission Commands methods
+--
+
+function method_addSubMenu(params)
+    -- TODO: return error on missing params
+    local path = missionCommands.addSubMenu(params.name, params.path)
+    return success(path)
+end
+
+function method_addGroupSubMenu(params)
+    -- TODO: return error on missing params
+    local path = missionCommands.addSubMenuForGroup(params.groupID, params.name, params.path)
+    return success(path)
+end
+
+function method_addCoalitionSubMenu(params)
+    -- TODO: return error on missing params
+    local path = missionCommands.addSubMenuForCoalition(params.coalition, params.name, params.path)
+    return success(path)
+end
+
+function method_addCommand(params)
+    -- TODO: return error on missing params
+    local path = missionCommands.addCommand(
+            params.name,
+            params.path,
+            handleCommand,
+            params.command
+    )
+    return success(path)
+end
+
+function method_addGroupCommand(params)
+    -- TODO: return error on missing params
+    local path = missionCommands.addCommandForGroup(
+            params.groupID,
+            params.name,
+            params.path,
+            handleCommand,
+            params.command
+    )
+    return success(path)
+end
+
+function method_addCoalitionCommand(params)
+    -- TODO: return error on missing params
+    local path = missionCommands.addCommandForCoalition(
+            params.coalition,
+            params.name,
+            params.path,
+            handleCommand,
+            params.command
+    )
+    return success(path)
+end
+
+function method_removeEntry(params)
+    -- TODO: return error on missing params
+    missionCommands.removeItem(params.path)
+    return success("ok")
+end
+
+function method_removeGroupEntry(params)
+    -- TODO: return error on missing params
+    missionCommands.removeItemForGroup(params.groupID, params.path)
+    return success("ok")
+end
+
+function method_removeCoalitionEntry(params)
+    -- TODO: return error on missing params
+    missionCommands.removeItemForCoalition(params.coalition, params.path)
+    return success("ok")
+end
+
+--
 -- Helper
 --
 
@@ -277,6 +362,13 @@ function error(msg)
     return {
         error = msg
     }
+end
+
+function handleCommand(command)
+    jsonrpc.broadcast("CommandSelect", json:encode({
+        time = timer.getTime(),
+        command = command,
+    }))
 end
 
 --
@@ -482,7 +574,7 @@ function onEvent(event)
             -- x and z are rotated here compared to group/unit coords
             pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
-            -- ignored: idx, groupID
+            -- ignored: id, groupID
         }))
 
     elseif event.id == world.event.S_EVENT_MARK_CHANGE then
@@ -495,7 +587,7 @@ function onEvent(event)
             -- x and z are rotated here compared to group/unit coords
             pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
-            -- ignored: idx, groupID
+            -- ignored: id, groupID
         }))
 
     elseif event.id == world.event.S_EVENT_MARK_REMOVED then
@@ -508,7 +600,7 @@ function onEvent(event)
             -- x and z are rotated here compared to group/unit coords
             pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
-            -- ignored: idx, groupID
+            -- ignored: id, groupID
         }))
 
     end

@@ -10,7 +10,7 @@ fn main() {
 }
 
 fn run() -> Result<(), Error> {
-    let client = Client::connect("127.0.0.1:7777")?;
+    let client: Client<usize> = Client::connect("127.0.0.1:7777")?;
 
     let stdin = io::stdin();
     let mut lines = stdin.lock().lines();

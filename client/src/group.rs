@@ -37,6 +37,13 @@ impl Group {
             .ok_or_else(|| Error::GroupGone(self.id.clone()))
     }
 
+    pub fn id(&self) -> Result<usize, Error> {
+        match self.id {
+            Identifier::ID(id) => Ok(id),
+            Identifier::Name(_) => self.request("groupID"),
+        }
+    }
+
     pub fn name(&self) -> Result<Cow<'_, str>, Error> {
         match self.id {
             Identifier::ID(_) => self.request("groupName").map(Cow::Owned),

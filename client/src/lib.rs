@@ -13,6 +13,7 @@ mod event;
 mod group;
 mod identifier;
 mod jsonrpc;
+mod menu;
 mod position;
 mod scenery;
 mod staticobject;
@@ -32,6 +33,7 @@ pub use self::event::Event;
 use self::event::RawEvent;
 pub use self::group::*;
 pub use self::identifier::Identifier;
+pub use self::menu::*;
 pub use self::position::Position;
 pub use self::scenery::Scenery;
 pub use self::staticobject::Static;
@@ -39,14 +41,22 @@ pub use self::unit::Unit;
 pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;
 
-pub struct Client {
+pub struct Client<C = usize>
+where
+    for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+{
     client: jsonrpc::Client,
+    mark: std::marker::PhantomData<C>,
 }
 
-impl Client {
+impl<C> Client<C>
+where
+    for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+{
     pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self, Error> {
         Ok(Client {
             client: jsonrpc::Client::connect(addr)?,
+            mark: std::marker::PhantomData,
         })
     }
 
@@ -161,7 +171,7 @@ impl Client {
     }
 
     /// Returns an endless iterator that will yield all future mission events.
-    pub fn events(&self) -> Result<EventsIterator, Error> {
+    pub fn events(&self) -> Result<EventsIterator<C>, Error> {
         let (tx, rx) = channel::<RawEvent>();
         self.client.add_subscription(tx);
 
@@ -170,6 +180,7 @@ impl Client {
         Ok(EventsIterator {
             client: self.client.clone(),
             rx,
+            mark: self.mark,
         })
     }
 
@@ -185,20 +196,71 @@ impl Client {
 
         self.client.request("execute", Some(Params { lua }))
     }
+
+    pub fn add_submenu(&self, name: &str) -> Result<SubMenu<C>, Error> {
+        crate::menu::add_submenu(&self.client, name, None)
+    }
+
+    pub fn add_group_submenu(&self, group: Group, name: &str) -> Result<GroupSubMenu<C>, Error> {
+        let id = group.id()?;
+        crate::menu::add_group_submenu(&self.client, id, name, None)
+    }
+
+    pub fn add_coalition_submenu(
+        &self,
+        coalition: Coalition,
+        name: &str,
+    ) -> Result<CoalitionSubMenu<C>, Error> {
+        crate::menu::add_coalition_submenu(&self.client, coalition, name, None)
+    }
+
+    pub fn add_command(&self, name: &str, command: C) -> Result<MenuEntry, Error> {
+        crate::menu::add_command(&self.client, name, None, command)
+    }
+
+    pub fn add_group_command(
+        &self,
+        group: Group,
+        name: &str,
+        command: C,
+    ) -> Result<GroupMenuEntry, Error> {
+        let id = group.id()?;
+        crate::menu::add_group_command(&self.client, id, name, None, command)
+    }
+
+    pub fn add_coalition_command(
+        &self,
+        coalition: Coalition,
+        name: &str,
+        command: C,
+    ) -> Result<CoalitionMenuEntry, Error> {
+        crate::menu::add_coalition_command(&self.client, coalition, name, None, command)
+    }
 }
 
-pub struct EventsIterator {
+pub struct EventsIterator<C> {
     client: jsonrpc::Client,
     rx: Receiver<RawEvent>,
+    mark: std::marker::PhantomData<C>,
 }
 
-impl Iterator for EventsIterator {
-    type Item = Event;
+impl<C> Iterator for EventsIterator<C>
+where
+    for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+{
+    type Item = Event<C>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.rx
             .recv()
             .ok()
-            .map(|ev| ev.into_event(self.client.clone()))
+            .and_then(|ev| match ev.into_event(self.client.clone()) {
+                Ok(ev) => Some(ev),
+                Err(err) => {
+                    // TODO: remove eprintln ?
+                    eprintln!("Error deserializing command: {}", err);
+                    None
+                }
+            })
     }
 }

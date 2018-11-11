@@ -1,7 +1,8 @@
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Airbase, Coalition, Identifier, Position, Scenery, Static, Unit, Weapon};
+use crate::{Airbase, Coalition, Error, Identifier, Position, Scenery, Static, Unit, Weapon};
+use serde_json::Value;
 
 #[derive(Debug, Clone)]
 pub enum Object {
@@ -14,7 +15,10 @@ pub enum Object {
 }
 
 #[derive(Debug, Clone)]
-pub enum Event {
+pub enum Event<C = usize>
+where
+    for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+{
     /// Occurs when a unit fires a weapon (but no machine gun- or autocannon-based weapons - those
     /// are handled by [Event::ShootingStart]).
     Shot {
@@ -250,6 +254,14 @@ pub enum Event {
         /// The mark's label.
         text: String,
     },
+
+    /// Occurs when a player selects an F10-menu command.
+    CommandSelect {
+        /// The event's mission time.
+        time: f64,
+        /// The command that has been selected
+        command: C,
+    },
 }
 
 enum_number!(ObjectCategory {
@@ -416,11 +428,19 @@ pub(crate) enum RawEvent {
         pos: Position,
         text: String,
     },
+
+    CommandSelect {
+        time: f64,
+        command: Value,
+    },
 }
 
 impl RawEvent {
-    pub fn into_event(self, client: Client) -> Event {
-        match self {
+    pub fn into_event<C>(self, client: Client) -> Result<Event<C>, Error>
+    where
+        for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+    {
+        let ev = match self {
             RawEvent::Shot {
                 time,
                 initiator,
@@ -595,11 +615,19 @@ impl RawEvent {
                 pos,
                 text,
             },
-        }
+            RawEvent::CommandSelect { time, command } => Event::CommandSelect {
+                time,
+                command: serde_json::from_value(command)?,
+            },
+        };
+        Ok(ev)
     }
 }
 
-impl fmt::Display for Event {
+impl<C> fmt::Display for Event<C>
+where
+    for<'de> C: serde::Serialize + serde::Deserialize<'de> + fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::Event::*;
 
@@ -675,6 +703,9 @@ impl fmt::Display for Event {
             MarkRemove {
                 time, text, pos, ..
             } => write!(f, "[{}] A mark has been removed at {}: {}", time, pos, text),
+            CommandSelect { time, command } => {
+                write!(f, "[{}] Menu command {} selected", time, command)
+            }
         }
     }
 }
