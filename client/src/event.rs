@@ -117,7 +117,7 @@ where
         /// The event's mission time.
         time: f64,
         /// The unit that captured the base.
-        initiator: Unit,
+        initiator: Option<Unit>,
         /// The airbase that was captured, can be a FARP or Airbase
         place: Airbase,
     },
@@ -339,7 +339,7 @@ pub(crate) enum RawEvent {
 
     BaseCapture {
         time: f64,
-        initiator: Identifier,
+        initiator: Option<Identifier>,
         place: Identifier,
     },
 
@@ -527,7 +527,7 @@ impl RawEvent {
                 place,
             } => Event::BaseCapture {
                 time,
-                initiator: Unit::new(client.clone(), initiator),
+                initiator: initiator.map(|initiator| Unit::new(client.clone(), initiator)),
                 place: Airbase::new(client.clone(), place),
             },
             RawEvent::MissionStart { time } => Event::MissionStart { time },
@@ -667,7 +667,16 @@ where
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] {} captured {}", time, initiator, place),
+            } => write!(
+                f,
+                "[{}] {} captured {}",
+                time,
+                initiator
+                    .as_ref()
+                    .map(|i| i.to_string())
+                    .unwrap_or_else(|| String::from("")),
+                place
+            ),
             MissionStart { time } => write!(f, "[{}] Mission started", time),
             MissionEnd { time } => write!(f, "[{}] Mission ended", time),
             Birth { time, initiator } => write!(f, "[{}] Unit {} was born", time, initiator),
