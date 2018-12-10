@@ -196,6 +196,20 @@ Get a list of all unit names that are part of the given group.
 **Params:**
 - *id* (int) or *name* (string) - the id or name of the group
 
+#### `groupSmoke`
+
+Add a smoke marker to the group's position. Requires the group to have a "Embark to transport" task setup.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the group
+
+#### `groupUnsmoke`
+
+Removes smoke markers from the group's position. Requires the group to have a "Embark to transport" task setup
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the group
+
 ### Unit Methods
 
 #### [`unitName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
@@ -211,6 +225,57 @@ Returns the unit's x, y, z position relative to the map's origin.
 
 **Params:**
 - *id* (int) or *name* (string) - the id or name of the unit
+
+#### `unitInfantryLoad`
+
+Command a group to embark a unit.
+
+**Params:**
+- load (object)
+    - *id* (int) or *name* (string) - the id or name of the group to be loaded
+- into (object)
+    - *id* (int) or *name* (string) - the id or name of the unit to load the group into
+
+#### `unitInfantryCapacity`
+
+Return how many infantry units a unit can load.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the unit the capacity should be returned for
+
+#### `unitInfantryLoaded`
+
+Return how many infantry units a unit has already loaded.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the unit the loaded count should be returned for
+
+#### `unitInfantryUnload`
+
+Command a group to embark a unit.
+
+**Params:**
+- unit (object)
+    - *id* (int) or *name* (string) - the id or name of the unit the group should be unloaded from
+- unload (object)
+    - *id* (int) or *name* (string) - the id or name of the group that should be unloaded
+
+#### `unitInfantrySmokeUnloadArea`
+
+Add a smoke marker to an unload area. This requires a "Disembarking" task being setup for the given unit and `group` to work.
+
+**Params:**
+- unit (object)
+    - *id* (int) or *name* (string) - the id or name of the unit the group is loaded into
+- smokeFor (object)
+    - *id* (int) or *name* (string) - the id or name of the group that should the smoke be placed for
+
+#### `unitLoadedGroups`
+
+Returns an array of group names of all the groups that are currently loaded into the provided unit.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the unit we want to return the loaded group names for
 
 ## Events
 

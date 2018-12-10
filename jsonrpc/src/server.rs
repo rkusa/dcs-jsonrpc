@@ -38,9 +38,8 @@ impl Server {
             tokio::run_async(
                 async move {
                     let mut incoming = Shutdownable::new(listener.incoming(), rx);
-                    let clients: Arc<
-                        Mutex<HashMap<usize, oneshot::Sender<()>>>,
-                    > = Arc::new(Mutex::new(HashMap::new()));
+                    let clients: Arc<Mutex<HashMap<usize, oneshot::Sender<()>>>> =
+                        Arc::new(Mutex::new(HashMap::new()));
                     let mut next_ix = 1;
 
                     while let Some(stream) = await!(incoming.next()) {

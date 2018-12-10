@@ -1,13 +1,14 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use crate::group::GroupIterator;
 use crate::jsonrpc::Client;
-use crate::{Error, Identifier, Position};
+use crate::{Error, Group, Identifier, Position};
 
 #[derive(Clone)]
 pub struct Unit {
     client: Client,
-    id: Identifier,
+    pub(crate) id: Identifier,
 }
 
 impl Unit {
@@ -36,6 +37,75 @@ impl Unit {
 
     pub fn position(&self) -> Result<Position, Error> {
         self.request("unitPosition")
+    }
+
+    pub fn infantry_load(&self, group: &Group) -> Result<(), Error> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Params<'a> {
+            into: &'a Identifier,
+            load: &'a Identifier,
+        }
+
+        self.client.notification(
+            "unitInfantryLoad",
+            Some(Params {
+                into: &self.id,
+                load: &group.id,
+            }),
+        )
+    }
+
+    pub fn infantry_capacity(&self) -> Result<u32, Error> {
+        self.request("unitInfantryCapacity")
+    }
+
+    pub fn infantry_loaded(&self) -> Result<u32, Error> {
+        self.request("unitInfantryLoaded")
+    }
+
+    pub fn infantry_unload(&self, group: &Group) -> Result<(), Error> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Params<'a> {
+            unit: &'a Identifier,
+            unload: &'a Identifier,
+        }
+
+        self.client.notification(
+            "unitInfantryUnload",
+            Some(Params {
+                unit: &self.id,
+                unload: &group.id,
+            }),
+        )
+    }
+
+    /// Requires a "Disembarking" task being setup for this unit and the provided `group` to work.
+    pub fn infantry_smoke_unload_area(&self, group: &Group) -> Result<(), Error> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Params<'a> {
+            unit: &'a Identifier,
+            smoke_for: &'a Identifier,
+        }
+
+        self.client.notification(
+            "unitInfantrySmokeUnloadArea",
+            Some(Params {
+                unit: &self.id,
+                smoke_for: &group.id,
+            }),
+        )
+    }
+
+    pub fn loaded_groups(&self) -> Result<GroupIterator, Error> {
+        let group_names: Vec<String> = self.client.request("unitLoadedGroups", Some(&self.id))?;
+
+        Ok(GroupIterator {
+            client: self.client.clone(),
+            group_names,
+        })
     }
 }
 

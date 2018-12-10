@@ -9,7 +9,7 @@ use serde_json::Value;
 #[derive(Clone)]
 pub struct Group {
     client: Client,
-    id: Identifier,
+    pub(crate) id: Identifier,
 }
 
 enum_number!(GroupCategory {
@@ -82,6 +82,18 @@ impl Group {
             client: self.client.clone(),
             unit_names,
         })
+    }
+
+    /// Add a smoke marker to the group's position.
+    /// Requires the group to have a "Embark to transport" task setup
+    pub fn smoke(&self) -> Result<(), Error> {
+        self.client.notification("groupSmoke", Some(&self.id))
+    }
+
+    /// Removes smoke markers from the group's position.
+    /// Requires the group to have a "Embark to transport" task setup
+    pub fn unsmoke(&self) -> Result<(), Error> {
+        self.client.notification("groupUnsmoke", Some(&self.id))
     }
 }
 

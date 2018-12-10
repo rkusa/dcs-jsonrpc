@@ -201,7 +201,7 @@ where
         crate::menu::add_submenu(&self.client, name, None)
     }
 
-    pub fn add_group_submenu(&self, group: Group, name: &str) -> Result<GroupSubMenu<C>, Error> {
+    pub fn add_group_submenu(&self, group: &Group, name: &str) -> Result<GroupSubMenu<C>, Error> {
         let id = group.id()?;
         crate::menu::add_group_submenu(&self.client, id, name, None)
     }
@@ -220,7 +220,7 @@ where
 
     pub fn add_group_command(
         &self,
-        group: Group,
+        group: &Group,
         name: &str,
         command: C,
     ) -> Result<GroupMenuEntry, Error> {

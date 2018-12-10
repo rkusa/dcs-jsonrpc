@@ -100,14 +100,14 @@ function method_outText(params)
     -- TODO: return error on missing params
     trigger.action.outText(params.text, params.displayTime, params.clearView)
 
-    return nil
+    return success(nil)
 end
 
 function method_removeMark(params)
     -- TODO: return error on missing params
     trigger.action.removeMark(params.id)
 
-    return nil
+    return success(nil)
 end
 
 --
@@ -249,6 +249,30 @@ function method_groupUnits(params)
     return success(unitNames)
 end
 
+function method_groupSmoke(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    if group == nil then
+        return error("Group does not exist")
+    end
+
+    group:markGroup(true)
+
+    return success(nil)
+end
+
+function method_groupUnsmoke(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    if group == nil then
+        return error("Group does not exist")
+    end
+
+    group:markGroup(false)
+
+    return success(nil)
+end
+
 --
 -- RPC Unit methods
 --
@@ -271,6 +295,89 @@ function method_unitPosition(params)
     else
         return success(unit:getPoint())
     end
+end
+
+function method_unitInfantryLoad(params)
+    -- TODO: return error on missing params
+    local load = groupByIdentifier(params.load)
+    local into = unitByIdentifier(params.into)
+
+    if load == nil then
+        return error("Loaded group does not exist")
+    end
+    if into == nil then
+        return error("Loading group does not exist")
+    end
+
+    load:embarking(into:getObjectID())
+
+    return success(nil)
+end
+
+function method_unitInfantryCapacity(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(nil)
+    else
+        return success(unit:getDescentCapacity())
+    end
+end
+
+function method_unitInfantryLoaded(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(nil)
+    else
+        return success(unit:getDescentOnBoard())
+    end
+end
+
+function method_unitInfantryUnload(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params.unit)
+    local group = groupByIdentifier(params.unload)
+
+    if unit == nil then
+        return error("Unit does not exist")
+    end
+    if group == nil then
+        return error("Group does not exist")
+    end
+
+    unit:disembarking(group:getID())
+
+    return success(nil)
+end
+
+function method_unitInfantrySmokeUnloadArea(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params.unit)
+    local group = unitByIdentifier(params.smokeFor)
+
+    if unit == nil then
+        return error("Unit does not exist")
+    end
+    if group == nil then
+        return error("Group does not exist")
+    end
+
+    unit:markDisembarkingTask(group:getID())
+
+    return success(nil)
+end
+
+function method_unitLoadedGroups(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    local groupNames = {}
+    if unit ~= nil then
+        for i, group in pairs(coalition.getDescentsOnBoard(unit:getObjectID())) do
+            groupNames[i] = group:getName()
+        end
+    end
+    return success(groupNames)
 end
 
 --
