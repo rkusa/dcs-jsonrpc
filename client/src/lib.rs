@@ -36,7 +36,7 @@ pub use self::identifier::Identifier;
 pub use self::menu::*;
 pub use self::position::Position;
 pub use self::scenery::Scenery;
-pub use self::staticobject::Static;
+pub use self::staticobject::*;
 pub use self::unit::Unit;
 pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;
@@ -168,6 +168,39 @@ where
         }
 
         Ok(group)
+    }
+
+    /// Adds a new static object to the mission.
+    pub fn add_static(
+        &self,
+        country: Country,
+        data: StaticData,
+    ) -> Result<Static, Error> {
+        #[derive(Serialize)]
+        struct Params {
+            country: Country,
+            data: StaticData,
+        }
+
+        let name = data.name.clone();
+        self.client.notification(
+            "addStatic",
+            Some(Params {
+                country,
+                data,
+            }),
+        )?;
+
+        let staticobj = Static::new(self.client.clone(), name);
+        let started = Instant::now();
+        while !staticobj.exists()? {
+            if started.elapsed() > Duration::from_secs(1) {
+                return Err(Error::AddStaticTimeout);
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        Ok(staticobj)
     }
 
     /// Returns an endless iterator that will yield all future mission events.

@@ -1,7 +1,7 @@
 enum_number!(Country {
     Russia = 0,
     Ukraine = 1,
-    Usa = 2,
+    USA = 2,
     Turkey = 3,
     Uk = 4,
     France = 5,

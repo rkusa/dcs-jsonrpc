@@ -107,6 +107,7 @@ pub struct GroupIterator {
 pub enum GroupData {
     Aircraft(AircraftGroupData),
     Ground(GroundGroupData),
+    // TODO needed?
     Static(StaticGroupData),
 }
 
@@ -150,7 +151,7 @@ pub struct GroundGroupData {
     pub y: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StaticGroupData {
     #[serde(rename = "groupId")]
     pub id: u64,
@@ -165,7 +166,7 @@ pub struct StaticGroupData {
     pub y: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RouteData {
     pub points: Vec<PointData>,
 }
@@ -284,13 +285,15 @@ pub enum TargetType {
 
 // known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks, livery_id,
 // onboard_num, psi
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UnitData {
     #[serde(rename = "unitId")]
     pub id: u64,
     #[serde(rename = "type")]
     pub kind: String, // TODO: enum?
     pub name: String,
+    #[serde(default)]
+    pub shape_name: String,
     #[serde(default)]
     pub alt: f64,
     #[serde(default)]
@@ -305,6 +308,8 @@ pub struct UnitData {
     pub speed: f64,
     pub x: f64,
     pub y: f64,
+    #[serde(default)]
+    pub can_cargo: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

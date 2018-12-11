@@ -107,6 +107,29 @@ impl Unit {
             group_names,
         })
     }
+
+    pub fn is_airborne(&self) -> Result<bool, Error> {
+        self.request("unitIsAirborne")
+    }
+
+    pub fn orientation(&self) -> Result<Orientation, Error> {
+        self.request("unitOrientation")
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Vector {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Orientation {
+    pub p: Vector,
+    pub x: Vector,
+    pub y: Vector,
+    pub z: Vector,
 }
 
 pub struct UnitIterator {

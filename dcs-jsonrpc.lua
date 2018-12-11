@@ -65,6 +65,19 @@ function unitByIdentifier(params)
     end
 end
 
+function staticByIdentifier(params)
+    local name = params.name
+    if type(params.name) ~= "string" then
+        name = groupId2Name[params.id]
+    end
+
+    if type(name) == "string" then
+        return StaticObject.getByName(name)
+    else
+        return nil
+    end
+end
+
 --
 -- RPC methods
 --
@@ -380,6 +393,68 @@ function method_unitLoadedGroups(params)
     return success(groupNames)
 end
 
+function method_unitIsAirborne(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(nil)
+    else
+        return success(unit:inAir())
+    end
+end
+
+function method_unitOrientation(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(nil)
+    else
+        return success(unit:getPosition())
+    end
+end
+
+--
+-- RPC Unit methods
+--
+
+function method_addStatic(params)
+    -- TODO: return error on missing params
+    coalition.addStaticObject(params.country, params.data)
+    -- Note: the static does not exist immediately, why we cannot do something like
+    -- staticobj:getName() here
+    return success(nil)
+end
+
+function method_staticID(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj == nil then
+        return success(nil)
+    else
+        return success(staticobj:getID())
+    end
+end
+
+function method_staticName(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj == nil then
+        return success(nil)
+    else
+        return success(staticobj:getName())
+    end
+end
+
+function method_staticExists(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj == nil then
+        return success(false)
+    else
+        return success(staticobj:isExist())
+    end
+end
+
 --
 -- RPC Mission Commands methods
 --
@@ -405,10 +480,10 @@ end
 function method_addCommand(params)
     -- TODO: return error on missing params
     local path = missionCommands.addCommand(
-            params.name,
-            params.path,
-            handleCommand,
-            params.command
+        params.name,
+        params.path,
+        handleCommand,
+        params.command
     )
     return success(path)
 end
@@ -416,11 +491,11 @@ end
 function method_addGroupCommand(params)
     -- TODO: return error on missing params
     local path = missionCommands.addCommandForGroup(
-            params.groupID,
-            params.name,
-            params.path,
-            handleCommand,
-            params.command
+        params.groupID,
+        params.name,
+        params.path,
+        handleCommand,
+        params.command
     )
     return success(path)
 end
@@ -428,11 +503,11 @@ end
 function method_addCoalitionCommand(params)
     -- TODO: return error on missing params
     local path = missionCommands.addCommandForCoalition(
-            params.coalition,
-            params.name,
-            params.path,
-            handleCommand,
-            params.command
+        params.coalition,
+        params.name,
+        params.path,
+        handleCommand,
+        params.command
     )
     return success(path)
 end

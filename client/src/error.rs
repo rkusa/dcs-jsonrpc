@@ -11,7 +11,9 @@ pub enum Error {
     Rpc(dcsjsonrpc_common::RpcError),
     GroupGone(Identifier),
     UnitGone(Identifier),
+    StaticGone(Identifier),
     AddGroupTimeout,
+    AddStaticTimeout,
 }
 
 impl fmt::Display for Error {
@@ -20,7 +22,7 @@ impl fmt::Display for Error {
         use std::error::Error;
 
         match self {
-            GroupGone(ref id) | UnitGone(ref id) => write!(f, "{} does not exist anymore", id)?,
+            GroupGone(ref id) | UnitGone(ref id) | StaticGone(ref id) => write!(f, "{} does not exist anymore", id)?,
             _ => write!(f, "Error: {}", self.description())?,
         }
 
@@ -46,8 +48,12 @@ impl error::Error for Error {
             Rpc(ref err) => err.description(),
             GroupGone(_) => "Group does not exist anymore",
             UnitGone(_) => "Unit does not exist anymore",
+            StaticGone(_) => "Static does not exist anymore",
             AddGroupTimeout => {
                 "A newly added group did not exist 1 second after its supposed spawn"
+            },
+            AddStaticTimeout => {
+                "A newly added statics did not exist 1 second after its supposed spawn"
             }
         }
     }

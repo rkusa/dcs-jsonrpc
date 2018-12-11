@@ -277,6 +277,51 @@ Returns an array of group names of all the groups that are currently loaded into
 **Params:**
 - *id* (int) or *name* (string) - the id or name of the unit we want to return the loaded group names for
 
+#### [`unitIsAirborne`](https://wiki.hoggitworld.com/view/DCS_func_inAir)
+
+Returns whether the unit is currently in the air or not.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the unit
+
+#### [`unitOrientation`](https://wiki.hoggitworld.com/view/DCS_func_getPosition)
+
+Returns the units current position and orientation in 3D space. x, y, z values are unit vectors defining the objects orientation.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the unit
+
+### Statics Methods
+
+#### [`addStatic`](https://wiki.hoggitworld.com/view/DCS_func_addStaticObject)
+
+Dynamically spawns a static of the specified country. Static data table is in the same format as created by the mission editor.
+
+**Params:**
+- *country* (u8) - the static's country
+- *data* (u8) - the static data (same format as created by the mission editor)
+
+#### [`staticID`](https://wiki.hoggitworld.com/view/DCS_func_getID)
+
+Returns the static's id.
+
+**Params:**
+- *name* (string) - the name of the static
+
+#### [`staticName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
+
+Returns the static's name.
+
+**Params:**
+- *id* (int) - the id of the static
+
+#### [`staticExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+
+Return a boolean value based on whether the static currently exists in the mission.
+
+**Params:**
+- *id* (int) or *name* (string) - the id or name of the static
+
 ## Events
 
 Subscribe to events by calling the `subscribe` method and providing the event name as a `name` parameter, e.g.:
