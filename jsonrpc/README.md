@@ -34,6 +34,13 @@ Removes a mark panel from the f10 map
 **Params:**
 - *id* (number) - the id of the mark that should be removed
 
+#### [`getZone`](https://wiki.hoggitworld.com/view/DCS_func_getZone)
+
+Returns information about the given zone. Returns an object containing the zones `position` and `radius`.
+
+**Params:**
+- *name* (string) - the name of the trigger zone
+
 ### Mission Command Methods
 
 #### [`addSubMenu`](https://wiki.hoggitworld.com/view/DCS_func_addSubMenu)

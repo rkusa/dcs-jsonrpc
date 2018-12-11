@@ -267,6 +267,22 @@ where
     ) -> Result<CoalitionMenuEntry, Error> {
         crate::menu::add_coalition_command(&self.client, coalition, name, None, command)
     }
+
+    pub fn zone(&self, name: &str) -> Result<Zone, Error> {
+        #[derive(Serialize)]
+        struct Params<'a> {
+            name: &'a str,
+        }
+
+        self.client.request("getZone", Some(Params { name }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Zone {
+    #[serde(rename = "point")]
+    pub position: Position,
+    pub radius: f64, // in m
 }
 
 pub struct EventsIterator<C> {

@@ -82,6 +82,12 @@ function method_removeMark(params)
     return success(nil)
 end
 
+function method_getZone(params)
+    -- TODO: return error on missing params
+    local zone = trigger.misc.getZone(params.name)
+    return success(zone)
+end
+
 --
 -- RPC Group methods
 --
