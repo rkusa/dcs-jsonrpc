@@ -146,14 +146,12 @@ function method_groupData(params)
     end
 
     local id = group:getID()
-    for _, countryData in pairs(countries) do
-        if type(countryData) == 'table' and type(countryData.plane) == 'table' and type(countryData.plane.group) == 'table' then
-            for _, category in pairs(countryData) do
-                if type(category) == 'table' and type(category.group) == 'table' then
-                    for _, groupData in pairs(category.group) do
-                        if groupData.groupId == id then
-                            return success(groupData)
-                        end
+    for _, country in pairs(countries) do
+        for _, category in pairs(country) do
+            if type(category) == 'table' and type(category.group) == 'table' then
+                for _, groupData in pairs(category.group) do
+                    if groupData.groupId == id then
+                        return success(groupData)
                     end
                 end
             end
