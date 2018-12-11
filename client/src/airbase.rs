@@ -1,42 +1,35 @@
-use std::borrow::Cow;
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Error, Identifier};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Airbase {
+    #[serde(skip)]
     client: Client,
-    id: Identifier,
+    name: String,
 }
 
 impl Airbase {
-    pub(crate) fn new<I: Into<Identifier>>(client: Client, id: I) -> Self {
+    pub(crate) fn new<N: Into<String>>(client: Client, name: N) -> Self {
         Airbase {
             client,
-            id: id.into(),
+            name: name.into(),
         }
     }
 
-    pub fn name(&self) -> Result<Cow<'_, str>, Error> {
-        match self.id {
-            Identifier::ID(_) => self
-                .client
-                .request("unitName", Some(&self.id))
-                .map(Cow::Owned),
-            Identifier::Name(ref name) => Ok(Cow::Borrowed(name)),
-        }
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
 impl fmt::Debug for Airbase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Airbase {{ id: {} }}", self.id)
+        write!(f, "Airbase {{ name: {} }}", self.name)
     }
 }
 
 impl fmt::Display for Airbase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Airbase {}", self.id)
+        write!(f, "Airbase {}", self.name)
     }
 }

@@ -1,15 +1,15 @@
-use std::borrow::Cow;
 use std::fmt;
 
 use crate::jsonrpc::Client;
 use crate::unit::UnitIterator;
-use crate::{Coalition, Country, Error, Identifier};
+use crate::{Coalition, Country, Error};
 use serde_json::Value;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Group {
+    #[serde(skip)]
     client: Client,
-    pub(crate) id: Identifier,
+    name: String,
 }
 
 enum_number!(GroupCategory {
@@ -21,11 +21,15 @@ enum_number!(GroupCategory {
 });
 
 impl Group {
-    pub(crate) fn new<I: Into<Identifier>>(client: Client, id: I) -> Self {
+    pub(crate) fn new<N: Into<String>>(client: Client, name: N) -> Self {
         Group {
             client,
-            id: id.into(),
+            name: name.into(),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     fn request<R>(&self, method: &str) -> Result<R, Error>
@@ -33,30 +37,20 @@ impl Group {
         for<'de> R: serde::Deserialize<'de>,
     {
         self.client
-            .request::<_, Option<R>>(method, Some(&self.id))?
-            .ok_or_else(|| Error::GroupGone(self.id.clone()))
+            .request::<_, Option<R>>(method, Some(&self))?
+            .ok_or_else(|| Error::GroupGone(self.name.clone()))
     }
 
     pub fn id(&self) -> Result<usize, Error> {
-        match self.id {
-            Identifier::ID(id) => Ok(id),
-            Identifier::Name(_) => self.request("groupID"),
-        }
-    }
-
-    pub fn name(&self) -> Result<Cow<'_, str>, Error> {
-        match self.id {
-            Identifier::ID(_) => self.request("groupName").map(Cow::Owned),
-            Identifier::Name(ref name) => Ok(Cow::Borrowed(name)),
-        }
+        self.request("groupID")
     }
 
     pub fn exists(&self) -> Result<bool, Error> {
-        self.client.request("groupExists", Some(&self.id))
+        self.client.request("groupExists", Some(&self))
     }
 
     pub fn data(&self) -> Result<Option<GroupData>, Error> {
-        self.client.request("groupData", Some(&self.id))
+        self.request("groupData")
     }
 
     pub fn coalition(&self) -> Result<Coalition, Error> {
@@ -72,11 +66,11 @@ impl Group {
     }
 
     pub fn activate(&self) -> Result<(), Error> {
-        self.client.notification("groupActivate", Some(&self.id))
+        self.client.notification("groupActivate", Some(&self))
     }
 
     pub fn units(&self) -> Result<UnitIterator, Error> {
-        let unit_names: Vec<String> = self.client.request("groupUnits", Some(&self.id))?;
+        let unit_names: Vec<String> = self.request("groupUnits")?;
 
         Ok(UnitIterator {
             client: self.client.clone(),
@@ -87,13 +81,13 @@ impl Group {
     /// Add a smoke marker to the group's position.
     /// Requires the group to have a "Embark to transport" task setup
     pub fn smoke(&self) -> Result<(), Error> {
-        self.client.notification("groupSmoke", Some(&self.id))
+        self.client.notification("groupSmoke", Some(&self))
     }
 
     /// Removes smoke markers from the group's position.
     /// Requires the group to have a "Embark to transport" task setup
     pub fn unsmoke(&self) -> Result<(), Error> {
-        self.client.notification("groupUnsmoke", Some(&self.id))
+        self.client.notification("groupUnsmoke", Some(&self))
     }
 }
 
@@ -426,12 +420,12 @@ impl Iterator for GroupIterator {
 
 impl fmt::Debug for Group {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Group {{ id: {} }}", self.id)
+        write!(f, "Group {{ name: {} }}", self.name)
     }
 }
 
 impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Group {}", self.id)
+        write!(f, "Group {}", self.name)
     }
 }

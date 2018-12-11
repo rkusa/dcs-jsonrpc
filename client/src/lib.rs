@@ -11,7 +11,6 @@ mod country;
 mod error;
 mod event;
 mod group;
-mod identifier;
 mod jsonrpc;
 mod menu;
 mod position;
@@ -32,7 +31,6 @@ pub use self::error::Error;
 pub use self::event::Event;
 use self::event::RawEvent;
 pub use self::group::*;
-pub use self::identifier::Identifier;
 pub use self::menu::*;
 pub use self::position::Position;
 pub use self::scenery::Scenery;
@@ -99,7 +97,7 @@ where
         if group.exists()? {
             Ok(group)
         } else {
-            Err(Error::GroupGone(Identifier::Name(name.to_string())))
+            Err(Error::GroupGone(name.to_string()))
         }
     }
 

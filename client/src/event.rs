@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Airbase, Coalition, Error, Identifier, Position, Scenery, Static, Unit, Weapon};
+use crate::{Airbase, Coalition, Error, Position, Scenery, Static, Unit, Weapon};
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
@@ -282,65 +282,65 @@ pub(crate) struct ID {
 pub(crate) struct RawTarget {
     category: ObjectCategory,
     id: usize,
-    name: Option<String>,
+    name: String,
 }
 
 #[derive(Clone, Deserialize)]
 pub(crate) enum RawEvent {
     Shot {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
         weapon: ID,
     },
 
     Hit {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
         weapon: ID,
         target: RawTarget,
     },
 
     Takeoff {
         time: f64,
-        initiator: Identifier,
-        place: Identifier,
+        initiator: String,
+        place: String,
     },
 
     Land {
         time: f64,
-        initiator: Identifier,
-        place: Identifier,
+        initiator: String,
+        place: String,
     },
 
     Crash {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     Ejection {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     Refueling {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     Dead {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     PilotDead {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     BaseCapture {
         time: f64,
-        initiator: Option<Identifier>,
-        place: Identifier,
+        initiator: Option<String>,
+        place: String,
     },
 
     MissionStart {
@@ -353,47 +353,47 @@ pub(crate) enum RawEvent {
 
     RefuelingStop {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     Birth {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     SystemFailure {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     EngineStartup {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     EngineShutdown {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     PlayerEnterUnit {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     PlayerLeaveUnit {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     ShootingStart {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     ShootingEnd {
         time: f64,
-        initiator: Identifier,
+        initiator: String,
     },
 
     MarkAdd {
@@ -402,7 +402,7 @@ pub(crate) enum RawEvent {
         group_id: Option<u64>,
         coalition: Option<Coalition>,
         id: usize,
-        initiator: Option<Identifier>,
+        initiator: Option<String>,
         pos: Position,
         text: String,
     },
@@ -413,7 +413,7 @@ pub(crate) enum RawEvent {
         group_id: Option<u64>,
         coalition: Option<Coalition>,
         id: usize,
-        initiator: Option<Identifier>,
+        initiator: Option<String>,
         pos: Position,
         text: String,
     },
@@ -424,7 +424,7 @@ pub(crate) enum RawEvent {
         group_id: Option<u64>,
         coalition: Option<Coalition>,
         id: usize,
-        initiator: Option<Identifier>,
+        initiator: Option<String>,
         pos: Position,
         text: String,
     },
@@ -454,28 +454,23 @@ impl RawEvent {
                 time,
                 initiator,
                 weapon,
-                mut target,
+                target,
             } => Event::Hit {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
                 weapon: Weapon::new(client.clone(), weapon.id),
                 target: {
-                    let id = target
-                        .name
-                        .take()
-                        .map(Identifier::Name)
-                        .unwrap_or_else(|| target.id.into());
                     match target.category {
-                        ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), id)),
+                        ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), target.name)),
                         ObjectCategory::Weapon => {
                             Object::Weapon(Weapon::new(client.clone(), target.id))
                         }
-                        ObjectCategory::Static => Object::Static(Static::new(client.clone(), id)),
+                        ObjectCategory::Static => Object::Static(Static::new(client.clone(), target.name)),
                         ObjectCategory::Scenery => {
-                            Object::Scenery(Scenery::new(client.clone(), id))
+                            Object::Scenery(Scenery::new(client.clone(), target.name))
                         }
-                        ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), id)),
-                        ObjectCategory::Cargo => Object::Cargo(Static::new(client.clone(), id)),
+                        ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), target.name)),
+                        ObjectCategory::Cargo => Object::Cargo(Static::new(client.clone(), target.name)),
                     }
                 },
             },

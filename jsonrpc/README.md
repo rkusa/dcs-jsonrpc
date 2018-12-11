@@ -143,35 +143,35 @@ Returns the group's name.
 Return a boolean value based on whether the group currently exists in the mission.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### [`groupCoalition`](https://wiki.hoggitworld.com/view/DCS_func_getCoalition)
 
 Returns the group's coalition.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### [`groupCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
 
 Returns the group's country.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### [`groupCategory`](https://wiki.hoggitworld.com/view/DCS_func_getCategory)
 
 Returns the group's category.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 ### `groupData`
 
 Returns the group data as defined in the mission editor. Result might be null, if the group was added later (and thus not defined in the mission editor).
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### [`addGroup`](https://wiki.hoggitworld.com/view/DCS_func_addGroup)
 
@@ -187,28 +187,28 @@ Dynamically spawns a group of the specified category for the specified country. 
 Activates the group if the group has a delayed start or late activation.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### [`groupUnits`](https://wiki.hoggitworld.com/view/DCS_func_getUnits)
 
 Get a list of all unit names that are part of the given group.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### `groupSmoke`
 
 Add a smoke marker to the group's position. Requires the group to have a "Embark to transport" task setup.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 #### `groupUnsmoke`
 
 Removes smoke markers from the group's position. Requires the group to have a "Embark to transport" task setup
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the group
+- *name* (string) - the name of the group
 
 ### Unit Methods
 
@@ -224,7 +224,7 @@ Returns the group's name.
 Returns the unit's x, y, z position relative to the map's origin.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the unit
+- *name* (string) - the name of the unit
 
 #### `unitInfantryLoad`
 
@@ -232,23 +232,23 @@ Command a group to embark a unit.
 
 **Params:**
 - load (object)
-    - *id* (int) or *name* (string) - the id or name of the group to be loaded
+    - *name* (string) - the name of the group to be loaded
 - into (object)
-    - *id* (int) or *name* (string) - the id or name of the unit to load the group into
+    - *name* (string) - the name of the unit to load the group into
 
 #### `unitInfantryCapacity`
 
 Return how many infantry units a unit can load.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the unit the capacity should be returned for
+- *name* (string) - the name of the unit the capacity should be returned for
 
 #### `unitInfantryLoaded`
 
 Return how many infantry units a unit has already loaded.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the unit the loaded count should be returned for
+- *name* (string) - the name of the unit the loaded count should be returned for
 
 #### `unitInfantryUnload`
 
@@ -256,9 +256,9 @@ Command a group to embark a unit.
 
 **Params:**
 - unit (object)
-    - *id* (int) or *name* (string) - the id or name of the unit the group should be unloaded from
+    - *name* (string) - the name of the unit the group should be unloaded from
 - unload (object)
-    - *id* (int) or *name* (string) - the id or name of the group that should be unloaded
+    - *name* (string) - the name of the group that should be unloaded
 
 #### `unitInfantrySmokeUnloadArea`
 
@@ -266,30 +266,30 @@ Add a smoke marker to an unload area. This requires a "Disembarking" task being 
 
 **Params:**
 - unit (object)
-    - *id* (int) or *name* (string) - the id or name of the unit the group is loaded into
+    - *name* (string) - the name of the unit the group is loaded into
 - smokeFor (object)
-    - *id* (int) or *name* (string) - the id or name of the group that should the smoke be placed for
+    - *name* (string) - the name of the group that should the smoke be placed for
 
 #### `unitLoadedGroups`
 
 Returns an array of group names of all the groups that are currently loaded into the provided unit.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the unit we want to return the loaded group names for
+- *name* (string) - the name of the unit we want to return the loaded group names for
 
 #### [`unitIsAirborne`](https://wiki.hoggitworld.com/view/DCS_func_inAir)
 
 Returns whether the unit is currently in the air or not.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the unit
+- *name* (string) - the name of the unit
 
 #### [`unitOrientation`](https://wiki.hoggitworld.com/view/DCS_func_getPosition)
 
 Returns the units current position and orientation in 3D space. x, y, z values are unit vectors defining the objects orientation.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the unit
+- *name* (string) - the name of the unit
 
 ### Statics Methods
 
@@ -320,7 +320,7 @@ Returns the static's name.
 Return a boolean value based on whether the static currently exists in the mission.
 
 **Params:**
-- *id* (int) or *name* (string) - the id or name of the static
+- *name* (string) - the name of the static
 
 ## Events
 

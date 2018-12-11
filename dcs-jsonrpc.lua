@@ -13,66 +13,25 @@ package.loaded["dcsjsonrpc"] = nil
 local jsonrpc = require "dcsjsonrpc"
 jsonrpc.start()
 
---
--- build object id to name tables
---
-local groupId2Name = {}
-local unitId2Name = {}
-
-for _, coalition in pairs(env.mission.coalition) do
-    for _, country in pairs(coalition.country) do
-        for _, category in pairs(country) do
-            if type(category) == 'table' and type(category.group) == 'table' then
-                for _, groupData in pairs(category.group) do
-                    local name = env.getValueDictByKey(groupData.name)
-                    groupId2Name[groupData.groupId] = name
-                    
-                    if type(groupData.units) == 'table' then
-                        for _, unitData in pairs(groupData.units) do
-                            local name = env.getValueDictByKey(unitData.name)
-                            unitId2Name[unitData.unitId] = name
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
 function groupByIdentifier(params)
-    local name = params.name
-    if type(params.name) ~= "string" then
-        name = groupId2Name[params.id]
-    end
-
-    if type(name) == "string" then
-        return Group.getByName(name)
+    if type(params.name) == "string" then
+        return Group.getByName(params.name)
     else
         return nil
     end
 end
 
 function unitByIdentifier(params)
-    local name = params.name
-    if type(params.name) ~= "string" then
-        name = unitId2Name[params.id]
-    end
-
-    if type(name) == "string" then
-        return Unit.getByName(name)
+    if type(params.name) == "string" then
+        return Unit.getByName(params.name)
     else
         return nil
     end
 end
 
 function staticByIdentifier(params)
-    local name = params.name
-    if type(params.name) ~= "string" then
-        name = groupId2Name[params.id]
-    end
-
-    if type(name) == "string" then
-        return StaticObject.getByName(name)
+    if type(params.name) == "string" then
+        return StaticObject.getByName(params.name)
     else
         return nil
     end
@@ -593,18 +552,11 @@ end, nil, timer.getTime() + .1)
 --
 -- listen to DCS events
 --
-function idAndName(obj)
+function identifier(obj)
     if obj == nil then
         return nil
     end
-    local result = {
-        id = tonumber(obj:getID()),
-    }
-    local name = obj:getName()
-    if type(name) == "string" then
-        result.name = name
-    end
-    return result
+    return obj:getName()
 end
 
 function onEvent(event)
@@ -612,16 +564,19 @@ function onEvent(event)
     if event.id == world.event.S_EVENT_SHOT then
         jsonrpc.broadcast("Shot", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
             weapon = { id = event.weapon:getName() },
         }))
 
     elseif event.id == world.event.S_EVENT_HIT then
-        local target = idAndName(event.target)
-        target.category = event.target:getCategory()
+        local target ={
+            id = tonumber(event.target:getID()),
+            name = event.target:getName() or "",
+            category = event.target:getCategory(),
+        }
         jsonrpc.broadcast("Hit", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
             weapon = { id = event.weapon:getName() },
             target = target,
         }))
@@ -629,52 +584,52 @@ function onEvent(event)
     elseif event.id == world.event.S_EVENT_TAKEOFF then
         jsonrpc.broadcast("Takeoff", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
-            place = idAndName(event.place),
+            initiator = identifier(event.initiator),
+            place = identifier(event.place),
         }))
 
     elseif event.id == world.event.S_EVENT_LAND then
         jsonrpc.broadcast("Land", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
-            place = idAndName(event.place),
+            initiator = identifier(event.initiator),
+            place = identifier(event.place),
         }))
 
     elseif event.id == world.event.S_EVENT_CRASH then
         jsonrpc.broadcast("Crash", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_EJECTION then
         jsonrpc.broadcast("Ejection", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_REFUELING then
         jsonrpc.broadcast("Refueling", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_DEAD then
         jsonrpc.broadcast("Dead", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_PILOT_DEAD then
         jsonrpc.broadcast("PilotDead", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_BASE_CAPTURED then
         jsonrpc.broadcast("BaseCapture", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
-            place = idAndName(event.place),
+            initiator = identifier(event.initiator),
+            place = identifier(event.place),
         }))
 
     elseif event.id == world.event.S_EVENT_MISSION_START then
@@ -693,43 +648,43 @@ function onEvent(event)
     elseif event.id == world.event.S_EVENT_REFUELING_STOP then
         jsonrpc.broadcast("RefuelingStop", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_BIRTH then
         jsonrpc.broadcast("Birth", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_HUMAN_FAILURE then
         jsonrpc.broadcast("SystemFailure", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_ENGINE_STARTUP then
         jsonrpc.broadcast("EngineStartup", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_ENGINE_SHUTDOWN  then
         jsonrpc.broadcast("EngineShutdown", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
         jsonrpc.broadcast("PlayerEnterUnit", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_PLAYER_LEAVE_UNIT then
         jsonrpc.broadcast("PlayerLeaveUnit", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     -- unimplemented: S_EVENT_PLAYER_COMMENT
@@ -737,13 +692,13 @@ function onEvent(event)
     elseif event.id == world.event.S_EVENT_SHOOTING_START then
         jsonrpc.broadcast("ShootingStart", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_SHOOTING_END then
         jsonrpc.broadcast("ShootingEnd", json:encode({
             time = event.time,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
         }))
 
     elseif event.id == world.event.S_EVENT_MARK_ADDED then
@@ -752,7 +707,7 @@ function onEvent(event)
             groupId = event.groupID > -1 and event.groupID or nil,
             coalition = event.coalition > -1 and event.coalition or nil,
             id = event.idx,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
             -- x and z are rotated here compared to group/unit coords
             pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
@@ -765,7 +720,7 @@ function onEvent(event)
             groupId = event.groupID > -1 and event.groupID or nil,
             coalition = event.coalition > -1 and event.coalition or nil,
             id = event.idx,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
             -- x and z are rotated here compared to group/unit coords
             pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,
@@ -778,7 +733,7 @@ function onEvent(event)
             groupId = event.groupID > -1 and event.groupID or nil,
             coalition = event.coalition > -1 and event.coalition or nil,
             id = event.idx,
-            initiator = idAndName(event.initiator),
+            initiator = identifier(event.initiator),
             -- x and z are rotated here compared to group/unit coords
             pos = { x = event.pos.z, y = event.pos.y, z = event.pos.x },
             text = event.text,

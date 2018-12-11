@@ -1,13 +1,13 @@
-use std::borrow::Cow;
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Identifier, Error};
+use crate::{Error};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Static {
+    #[serde(skip)]
     client: Client,
-    id: Identifier,
+    name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,11 +46,15 @@ pub struct StaticData {
 //});
 
 impl Static {
-    pub(crate) fn new<I: Into<Identifier>>(client: Client, id: I) -> Self {
+    pub(crate) fn new<N: Into<String>>(client: Client, name: N) -> Self {
         Static {
             client,
-            id: id.into(),
+            name: name.into(),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     fn request<R>(&self, method: &str) -> Result<R, Error>
@@ -58,38 +62,28 @@ impl Static {
                 for<'de> R: serde::Deserialize<'de>,
     {
         self.client
-            .request::<_, Option<R>>(method, Some(&self.id))?
-            .ok_or_else(|| Error::StaticGone(self.id.clone()))
+            .request::<_, Option<R>>(method, Some(&self))?
+            .ok_or_else(|| Error::StaticGone(self.name.clone()))
     }
 
     pub fn id(&self) -> Result<usize, Error> {
-        match self.id {
-            Identifier::ID(id) => Ok(id),
-            Identifier::Name(_) => self.request("staticID"),
-        }
-    }
-
-    pub fn name(&self) -> Result<Cow<'_, str>, Error> {
-        match self.id {
-            Identifier::ID(_) => self.request("staticName").map(Cow::Owned),
-            Identifier::Name(ref name) => Ok(Cow::Borrowed(name)),
-        }
+        self.request("staticID")
     }
 
     pub fn exists(&self) -> Result<bool, Error> {
-        self.client.request("staticExists", Some(&self.id))
+        self.client.request("staticExists", Some(&self))
     }
 }
 
 impl fmt::Debug for Static {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Static {{ id: {} }}", self.id)
+        write!(f, "Static {{ name: {} }}", self.name)
     }
 }
 
 impl fmt::Display for Static {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Static {}", self.id)
+        write!(f, "Static {}", self.name)
     }
 }
 

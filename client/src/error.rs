@@ -1,7 +1,5 @@
 use std::{error, fmt};
 
-use crate::identifier::Identifier;
-
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
@@ -9,9 +7,9 @@ pub enum Error {
     Send(std::sync::mpsc::SendError<std::vec::Vec<u8>>),
     Json(serde_json::Error),
     Rpc(dcsjsonrpc_common::RpcError),
-    GroupGone(Identifier),
-    UnitGone(Identifier),
-    StaticGone(Identifier),
+    GroupGone(String),
+    UnitGone(String),
+    StaticGone(String),
     AddGroupTimeout,
     AddStaticTimeout,
 }
