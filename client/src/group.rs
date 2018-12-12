@@ -287,8 +287,6 @@ pub struct UnitData {
     pub kind: String, // TODO: enum?
     pub name: String,
     #[serde(default)]
-    pub shape_name: String,
-    #[serde(default)]
     pub alt: f64,
     #[serde(default)]
     pub alt_type: AltitudeType,
@@ -302,8 +300,6 @@ pub struct UnitData {
     pub speed: f64,
     pub x: f64,
     pub y: f64,
-    #[serde(default)]
-    pub can_cargo: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
