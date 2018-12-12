@@ -131,6 +131,21 @@ function method_groupExists(params)
     end
 end
 
+function starts_with(str, start)
+    if type(str) ~= 'string' then
+        return false
+    end
+    return str:sub(1, #start) == start
+end
+
+function dict_value(key)
+    if starts_with(key, "DictKey_") then
+        return env.getValueDictByKey(key)
+    else
+        return key
+    end
+end
+
 function method_groupData(params)
     -- TODO: return error on missing params
     local group = groupByIdentifier(params)
@@ -151,6 +166,10 @@ function method_groupData(params)
             if type(category) == 'table' and type(category.group) == 'table' then
                 for _, groupData in pairs(category.group) do
                     if groupData.groupId == id then
+                        groupData.name = dict_value(groupData.name)
+                        for _, unit in pairs(groupData.units) do
+                            unit.name = dict_value(unit.name)
+                        end
                         return success(groupData)
                     end
                 end
