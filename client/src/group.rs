@@ -4,12 +4,19 @@ use crate::jsonrpc::Client;
 use crate::unit::UnitIterator;
 use crate::{Coalition, Country, Error};
 use serde_json::Value;
+use std::cell::RefCell;
 
 #[derive(Clone, Serialize)]
 pub struct Group {
     #[serde(skip)]
     client: Client,
     name: String,
+    #[serde(skip)]
+    pub(crate) category: RefCell<Option<GroupCategory>>,
+    #[serde(skip)]
+    pub(crate) country: RefCell<Option<Country>>,
+    #[serde(skip)]
+    pub(crate) data: RefCell<Option<GroupData>>,
 }
 
 enum_number!(GroupCategory {
@@ -25,6 +32,9 @@ impl Group {
         Group {
             client,
             name: name.into(),
+            country: RefCell::new(None),
+            category: RefCell::new(None),
+            data: RefCell::new(None),
         }
     }
 
@@ -49,8 +59,17 @@ impl Group {
         self.client.request("groupExists", Some(&self))
     }
 
-    pub fn data(&self) -> Result<Option<GroupData>, Error> {
-        self.request("groupData")
+    pub fn data(&self) -> Result<GroupData, Error> {
+        let mut b = self.data.borrow_mut();
+        if let Some(data) = b.take() {
+            b.replace(data.clone());
+            return Ok(data);
+        }
+        let data: GroupData = self
+            .request::<Option<GroupData>>("groupData")?
+            .ok_or_else(|| Error::NoData(self.name.clone()))?;
+        b.replace(data.clone());
+        return Ok(data);
     }
 
     pub fn coalition(&self) -> Result<Coalition, Error> {
@@ -58,11 +77,25 @@ impl Group {
     }
 
     pub fn country(&self) -> Result<Country, Error> {
-        self.request("groupCountry")
+        let mut b = self.country.borrow_mut();
+        if let Some(country) = b.take() {
+            b.replace(country.clone());
+            return Ok(country);
+        }
+        let country: Country = self.request("groupCountry")?;
+        b.replace(country.clone());
+        return Ok(country);
     }
 
     pub fn category(&self) -> Result<GroupCategory, Error> {
-        self.request("groupCategory")
+        let mut b = self.category.borrow_mut();
+        if let Some(category) = b.take() {
+            b.replace(category.clone());
+            return Ok(category);
+        }
+        let category: GroupCategory = self.request("groupCategory")?;
+        b.replace(category.clone());
+        return Ok(category);
     }
 
     pub fn activate(&self) -> Result<(), Error> {
@@ -89,6 +122,31 @@ impl Group {
     pub fn unsmoke(&self) -> Result<(), Error> {
         self.client.notification("groupUnsmoke", Some(&self))
     }
+
+    pub fn out_text(&self, text: &str, display_time: usize, clear_view: bool) -> Result<(), Error> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Params<'a> {
+            group: &'a Group,
+            text: &'a str,
+            display_time: usize,
+            clear_view: bool,
+        }
+
+        self.client.notification(
+            "outTextForGroup",
+            Some(Params {
+                group: self,
+                text,
+                display_time,
+                clear_view,
+            }),
+        )
+    }
+
+    pub fn destroy(self) -> Result<(), Error> {
+        self.client.notification("groupDestory", Some(&self))
+    }
 }
 
 pub struct GroupIterator {
@@ -101,14 +159,12 @@ pub struct GroupIterator {
 pub enum GroupData {
     Aircraft(AircraftGroupData),
     Ground(GroundGroupData),
-    // TODO needed?
-    Static(StaticGroupData),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AircraftGroupData {
-    #[serde(rename = "groupId")]
-    pub id: u64,
+    //    #[serde(rename = "groupId", skip_serializing)]
+    //    pub id: u64,
     pub communication: bool,
     pub frequency: u16,
     pub hidden: bool,
@@ -128,8 +184,8 @@ pub struct AircraftGroupData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroundGroupData {
-    #[serde(rename = "groupId")]
-    pub id: u64,
+    //    #[serde(rename = "groupId", skip_serializing)]
+    //    pub id: u64,
     pub hidden: bool,
     pub name: String,
     pub route: RouteData,
@@ -141,21 +197,6 @@ pub struct GroundGroupData {
     pub uncontrollable: bool,
     pub units: Vec<UnitData>,
     pub visible: bool,
-    pub x: f64,
-    pub y: f64,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct StaticGroupData {
-    #[serde(rename = "groupId")]
-    pub id: u64,
-    pub name: String,
-    pub route: RouteData,
-    pub units: Vec<UnitData>,
-    pub heading: u64,
-    #[serde(rename = "linkOffset")]
-    pub link_offset: bool,
-    pub dead: bool,
     pub x: f64,
     pub y: f64,
 }
@@ -281,8 +322,8 @@ pub enum TargetType {
 // onboard_num, psi
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UnitData {
-    #[serde(rename = "unitId")]
-    pub id: u64,
+    //    #[serde(rename = "unitId")]
+    //    pub id: u64,
     #[serde(rename = "type")]
     pub kind: String, // TODO: enum?
     pub name: String,
@@ -396,6 +437,8 @@ pub enum TaskKind {
     Intercept,
     #[serde(rename = "Ground Nothing")]
     GroundNothing,
+    #[serde(rename = "Transport")]
+    Transport,
 }
 
 impl Default for TaskKind {

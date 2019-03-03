@@ -147,6 +147,7 @@ impl Client {
         let res = rx.recv()?;
         match res {
             Response::Success { result, .. } => {
+                // println!("{}", serde_json::to_string_pretty(&result).unwrap());
                 let res: R = serde_json::from_value(result)?;
                 Ok(res)
             }

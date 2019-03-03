@@ -10,6 +10,8 @@ pub enum Error {
     GroupGone(String),
     UnitGone(String),
     StaticGone(String),
+    ZoneGone(String),
+    NoData(String),
     AddGroupTimeout,
     AddStaticTimeout,
 }
@@ -21,6 +23,7 @@ impl fmt::Display for Error {
 
         match self {
             GroupGone(ref id) | UnitGone(ref id) | StaticGone(ref id) => write!(f, "{} does not exist anymore", id)?,
+            NoData(ref name) => write!(f, "No data for {} found (there will only be data for groups defined in the Mission Editor)", name)?,
             _ => write!(f, "Error: {}", self.description())?,
         }
 
@@ -47,9 +50,11 @@ impl error::Error for Error {
             GroupGone(_) => "Group does not exist anymore",
             UnitGone(_) => "Unit does not exist anymore",
             StaticGone(_) => "Static does not exist anymore",
+            ZoneGone(_) => "Zone does not exist",
+            NoData(_) => "No group data found",
             AddGroupTimeout => {
                 "A newly added group did not exist 1 second after its supposed spawn"
-            },
+            }
             AddStaticTimeout => {
                 "A newly added statics did not exist 1 second after its supposed spawn"
             }

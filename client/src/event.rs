@@ -329,6 +329,7 @@ pub(crate) enum RawEvent {
 
     Dead {
         time: f64,
+        // TODO: might be a weapon (id instead of name)
         initiator: String,
     },
 
@@ -461,16 +462,24 @@ impl RawEvent {
                 weapon: Weapon::new(client.clone(), weapon.id),
                 target: {
                     match target.category {
-                        ObjectCategory::Unit => Object::Unit(Unit::new(client.clone(), target.name)),
+                        ObjectCategory::Unit => {
+                            Object::Unit(Unit::new(client.clone(), target.name))
+                        }
                         ObjectCategory::Weapon => {
                             Object::Weapon(Weapon::new(client.clone(), target.id))
                         }
-                        ObjectCategory::Static => Object::Static(Static::new(client.clone(), target.name)),
+                        ObjectCategory::Static => {
+                            Object::Static(Static::new(client.clone(), target.name))
+                        }
                         ObjectCategory::Scenery => {
                             Object::Scenery(Scenery::new(client.clone(), target.name))
                         }
-                        ObjectCategory::Base => Object::Base(Airbase::new(client.clone(), target.name)),
-                        ObjectCategory::Cargo => Object::Cargo(Static::new(client.clone(), target.name)),
+                        ObjectCategory::Base => {
+                            Object::Base(Airbase::new(client.clone(), target.name))
+                        }
+                        ObjectCategory::Cargo => {
+                            Object::Cargo(Static::new(client.clone(), target.name))
+                        }
                     }
                 },
             },

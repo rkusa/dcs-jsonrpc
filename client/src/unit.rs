@@ -32,6 +32,10 @@ impl Unit {
             .ok_or_else(|| Error::GroupGone(self.name.clone()))
     }
 
+    pub fn exists(&self) -> Result<bool, Error> {
+        self.client.request("unitExists", Some(&self))
+    }
+
     pub fn position(&self) -> Result<Position, Error> {
         self.request("unitPosition")
     }

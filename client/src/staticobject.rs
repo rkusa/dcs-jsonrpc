@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::jsonrpc::Client;
-use crate::{Error};
+use crate::{Country, Error, Position};
 
 #[derive(Clone, Serialize)]
 pub struct Static {
@@ -17,9 +17,8 @@ pub enum StaticCategory {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StaticData {
-    #[serde(rename = "unitId")]
-    pub id: u64,
-    #[serde(rename = "type")]
+    //    #[serde(rename = "unitId", skip_serializing)]
+    //    pub id: u64,
     pub category: StaticCategory,
     pub name: String,
     pub shape_name: String,
@@ -58,8 +57,8 @@ impl Static {
     }
 
     fn request<R>(&self, method: &str) -> Result<R, Error>
-        where
-                for<'de> R: serde::Deserialize<'de>,
+    where
+        for<'de> R: serde::Deserialize<'de>,
     {
         self.client
             .request::<_, Option<R>>(method, Some(&self))?
@@ -72,6 +71,24 @@ impl Static {
 
     pub fn exists(&self) -> Result<bool, Error> {
         self.client.request("staticExists", Some(&self))
+    }
+
+    pub fn country(&self) -> Result<Country, Error> {
+        self.request("staticCountry")
+    }
+
+    pub fn data(&self) -> Result<StaticData, Error> {
+        // TODO: NoData never used since StaticGone in request
+        self.request::<Option<StaticData>>("staticData")?
+            .ok_or_else(|| Error::NoData(self.name.clone()))
+    }
+
+    pub fn position(&self) -> Result<Position, Error> {
+        self.request("staticPosition")
+    }
+
+    pub fn destroy(self) -> Result<(), Error> {
+        self.client.notification("staticDestory", Some(&self))
     }
 }
 

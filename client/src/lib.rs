@@ -38,22 +38,26 @@ pub use self::staticobject::*;
 pub use self::unit::Unit;
 pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;
+use std::cell::RefCell;
 
-pub struct Client<C = usize>
+pub struct Client<C = usize, S = ()>
 where
     for<'de> C: serde::Serialize + serde::Deserialize<'de>,
 {
     client: jsonrpc::Client,
+    pub state: S,
     mark: std::marker::PhantomData<C>,
 }
 
-impl<C> Client<C>
+impl<C, S> Client<C, S>
 where
     for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+    S: Default,
 {
     pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self, Error> {
         Ok(Client {
             client: jsonrpc::Client::connect(addr)?,
+            state: S::default(),
             mark: std::marker::PhantomData,
         })
     }
@@ -128,24 +132,32 @@ where
         })
     }
 
+    pub fn static_object(&self, name: &str) -> Result<Static, Error> {
+        let staticobj = Static::new(self.client.clone(), name);
+        if staticobj.exists()? {
+            Ok(staticobj)
+        } else {
+            Err(Error::StaticGone(name.to_string()))
+        }
+    }
+
     /// Adds a new group to the mission.
     pub fn add_group(
         &self,
         country: Country,
         category: GroupCategory,
-        data: GroupData,
+        data: &GroupData,
     ) -> Result<Group, Error> {
         #[derive(Serialize)]
-        struct Params {
+        struct Params<'a> {
             country: Country,
             category: GroupCategory,
-            data: GroupData,
+            data: &'a GroupData,
         }
 
         let name = match data {
             GroupData::Aircraft(AircraftGroupData { ref name, .. })
-            | GroupData::Ground(GroundGroupData { ref name, .. })
-            | GroupData::Static(StaticGroupData { ref name, .. }) => name.clone(),
+            | GroupData::Ground(GroundGroupData { ref name, .. }) => name.clone(),
         };
         self.client.notification(
             "addGroup",
@@ -156,7 +168,10 @@ where
             }),
         )?;
 
-        let group = Group::new(self.client.clone(), name);
+        let mut group = Group::new(self.client.clone(), name);
+        group.country = RefCell::new(Some(country));
+        group.category = RefCell::new(Some(category));
+        group.data = RefCell::new(Some(data.clone()));
         let started = Instant::now();
         while !group.exists()? {
             if started.elapsed() > Duration::from_secs(1) {
@@ -169,25 +184,16 @@ where
     }
 
     /// Adds a new static object to the mission.
-    pub fn add_static(
-        &self,
-        country: Country,
-        data: StaticData,
-    ) -> Result<Static, Error> {
+    pub fn add_static(&self, country: Country, data: &StaticData) -> Result<Static, Error> {
         #[derive(Serialize)]
-        struct Params {
+        struct Params<'a> {
             country: Country,
-            data: StaticData,
+            data: &'a StaticData,
         }
 
         let name = data.name.clone();
-        self.client.notification(
-            "addStatic",
-            Some(Params {
-                country,
-                data,
-            }),
-        )?;
+        self.client
+            .notification("addStatic", Some(Params { country, data }))?;
 
         let staticobj = Static::new(self.client.clone(), name);
         let started = Instant::now();
@@ -274,7 +280,31 @@ where
             name: &'a str,
         }
 
-        self.client.request("getZone", Some(Params { name }))
+        let mut zone: Option<Zone> = self.client.request("getZone", Some(Params { name }))?;
+        match zone.take() {
+            Some(zone) => Ok(zone),
+            None => Err(Error::ZoneGone(name.to_string())),
+        }
+    }
+
+    pub fn get_user_flag(&self, flag: u16) -> Result<u16, Error> {
+        #[derive(Serialize)]
+        struct Params {
+            flag: u16,
+        }
+
+        self.client.request("getUserFlag", Some(Params { flag }))
+    }
+
+    pub fn set_user_flag(&self, flag: u16, value: u16) -> Result<(), Error> {
+        #[derive(Serialize)]
+        struct Params {
+            flag: u16,
+            value: u16,
+        }
+
+        self.client
+            .notification("setUserFlag", Some(Params { flag, value }))
     }
 }
 
@@ -289,6 +319,20 @@ pub struct EventsIterator<C> {
     client: jsonrpc::Client,
     rx: Receiver<RawEvent>,
     mark: std::marker::PhantomData<C>,
+}
+
+impl<C, S> Clone for Client<C, S>
+where
+    for<'de> C: serde::Serialize + serde::Deserialize<'de>,
+    S: Clone,
+{
+    fn clone(&self) -> Self {
+        Client {
+            client: self.client.clone(),
+            state: self.state.clone(),
+            mark: self.mark.clone(),
+        }
+    }
 }
 
 impl<C> Iterator for EventsIterator<C>

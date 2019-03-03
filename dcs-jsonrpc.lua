@@ -75,6 +75,18 @@ function method_outText(params)
     return success(nil)
 end
 
+function method_outTextForGroup(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params.group)
+    if group == nil then
+        return success(nil)
+    end
+
+    trigger.action.outTextForGroup(group:getID(), params.text, params.displayTime, params.clearView)
+
+    return success(nil)
+end
+
 function method_removeMark(params)
     -- TODO: return error on missing params
     trigger.action.removeMark(params.id)
@@ -85,7 +97,22 @@ end
 function method_getZone(params)
     -- TODO: return error on missing params
     local zone = trigger.misc.getZone(params.name)
-    return success(zone)
+    if zone == nil then
+        return success(nil)
+    else
+        return success(zone)
+    end
+end
+
+function method_getUserFlag(params)
+    -- TODO: return error on missing params
+    return success(trigger.misc.getUserFlag(params.flag))
+end
+
+function method_setUserFlag(params)
+    -- TODO: return error on missing params
+    trigger.action.setUserFlag(params.flag, params.value)
+    return success(nil)
 end
 
 --
@@ -162,15 +189,18 @@ function method_groupData(params)
 
     local id = group:getID()
     for _, country in pairs(countries) do
-        for _, category in pairs(country) do
-            if type(category) == 'table' and type(category.group) == 'table' then
-                for _, groupData in pairs(category.group) do
-                    if groupData.groupId == id then
-                        groupData.name = dict_value(groupData.name)
-                        for _, unit in pairs(groupData.units) do
-                            unit.name = dict_value(unit.name)
+        for kind, category in pairs(country) do
+            if kind ~= 'static' then
+                if type(category) == 'table' and type(category.group) == 'table' then
+                    for _, groupData in pairs(category.group) do
+                        if groupData.groupId == id then
+                            groupData.name = dict_value(groupData.name)
+                            groupData.category = Group.getByName(groupData.name):getCategory()
+                            for _, unit in pairs(groupData.units) do
+                                unit.name = dict_value(unit.name)
+                            end
+                            return success(groupData)
                         end
-                        return success(groupData)
                     end
                 end
             end
@@ -268,6 +298,15 @@ function method_groupUnsmoke(params)
     return success(nil)
 end
 
+function method_groupDestory(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    if group ~= nil then
+        group:destroy()
+    end
+    return success(nil)
+end
+
 --
 -- RPC Unit methods
 --
@@ -279,6 +318,16 @@ function method_unitName(params)
         return success(nil)
     else
         return success(unit:getID())
+    end
+end
+
+function method_unitExists(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return success(false)
+    else
+        return success(unit:isExist())
     end
 end
 
@@ -437,6 +486,73 @@ function method_staticExists(params)
     end
 end
 
+function method_staticData(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj == nil then
+        return success(nil)
+    end
+
+    local countries = {}
+    if staticobj:getCoalition() == coalition.side.RED then
+        countries = env.mission.coalition.red.country
+    else
+        countries = env.mission.coalition.blue.country
+    end
+
+    local id = tonumber(staticobj:getID())
+    env.info("[JSONRPC] SF: "..type(id))
+    for _, country in pairs(countries) do
+        for kind, category in pairs(country) do
+            if kind == 'static' then
+                if type(category) == 'table' and type(category.group) == 'table' then
+                    for _, groupData in pairs(category.group) do
+                        for _, unit in pairs(groupData.units) do
+                            env.info("[JSONRPC] ID: "..type(unit.unitId).." "..tostring(unit.unitId == id))
+                            if unit.unitId == id then
+                                unit.name = dict_value(unit.name)
+                                -- for statics return the first unit
+                                return success(unit)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return success(nil)
+end
+
+function method_staticPosition(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj == nil then
+        return success(nil)
+    else
+        return success(staticobj:getPoint())
+    end
+end
+
+function method_staticCountry(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj == nil then
+        return success(nil)
+    else
+        return success(staticobj:getCountry())
+    end
+end
+
+function method_staticDestory(params)
+    -- TODO: return error on missing params
+    local staticobj = staticByIdentifier(params)
+    if staticobj ~= nil then
+        staticobj:destroy()
+    end
+    return success(nil)
+end
+
 --
 -- RPC Mission Commands methods
 --
@@ -539,7 +655,7 @@ end
 -- RPC request handler
 --
 function handleRequest(method, params)
-    env.info("[JSON-RPC] receiving method "..method.." with params: "..tostring(params))
+    --env.info("[JSON-RPC] receiving method "..method.." with params: "..tostring(params))
 
     local fnName = "method_"..method
     local fn = _G[fnName]
@@ -550,7 +666,7 @@ function handleRequest(method, params)
     if type(fn) == "function" then
         local ok, result = pcall(fn, params)
         if not ok then
-            env.info("[JSON-RPC] error executing "..method.." with params: "..tostring(params)..": "..tostring(result))
+            env.error("[JSON-RPC] error executing "..method.." with params: "..tostring(params)..": "..tostring(result))
         end
 
         return result
@@ -562,15 +678,15 @@ function handleRequest(method, params)
 end
 
 --
--- execute JSON-RPC requests every 0.1 seconds
+-- execute JSON-RPC requests every 0.02 seconds
 --
 timer.scheduleFunction(function(arg, time)
     while jsonrpc.next(handleRequest) do
         -- TODO: restrict handled requests per tick?
     end
 
-    return timer.getTime() + .1 -- return time of next call
-end, nil, timer.getTime() + .1)
+    return timer.getTime() + .02 -- return time of next call
+end, nil, timer.getTime() + .02)
 
 --
 -- listen to DCS events
@@ -765,14 +881,14 @@ function onEvent(event)
 
     end
 
-    env.info("[JSONRPC] Event: "..inspect(event))
+    --env.info("[JSONRPC] Event: "..inspect(event))
 end
 
 local eventHandler = {}
 function eventHandler:onEvent(event)
     local ok, err = pcall(onEvent, event)
     if not ok then
-        env.info("[JSONRPC] Error in event handler: "..tostring(err))
+        env.error("[JSONRPC] Error in event handler: "..tostring(err))
     end
 end
 world.addEventHandler(eventHandler)
