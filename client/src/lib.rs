@@ -40,24 +40,21 @@ pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;
 use std::cell::RefCell;
 
-pub struct Client<C = usize, S = ()>
+pub struct Client<C = usize>
 where
     for<'de> C: serde::Serialize + serde::Deserialize<'de>,
 {
     client: jsonrpc::Client,
-    pub state: S,
     mark: std::marker::PhantomData<C>,
 }
 
-impl<C, S> Client<C, S>
+impl<C> Client<C>
 where
     for<'de> C: serde::Serialize + serde::Deserialize<'de>,
-    S: Default,
 {
     pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self, Error> {
         Ok(Client {
             client: jsonrpc::Client::connect(addr)?,
-            state: S::default(),
             mark: std::marker::PhantomData,
         })
     }
@@ -287,6 +284,10 @@ where
         }
     }
 
+    pub fn zones(&self) -> Result<Vec<String>, Error> {
+        self.client.request::<(), Vec<String>>("getZones", None)
+    }
+
     pub fn get_user_flag(&self, flag: u16) -> Result<u16, Error> {
         #[derive(Serialize)]
         struct Params {
@@ -321,15 +322,13 @@ pub struct EventsIterator<C> {
     mark: std::marker::PhantomData<C>,
 }
 
-impl<C, S> Clone for Client<C, S>
+impl<C> Clone for Client<C>
 where
     for<'de> C: serde::Serialize + serde::Deserialize<'de>,
-    S: Clone,
 {
     fn clone(&self) -> Self {
         Client {
             client: self.client.clone(),
-            state: self.state.clone(),
             mark: self.mark.clone(),
         }
     }

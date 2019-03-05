@@ -40,6 +40,11 @@ impl Unit {
         self.request("unitPosition")
     }
 
+    pub fn group(&self) -> Result<Group, Error> {
+        let name: String = self.request("unitGroup")?;
+        Ok(Group::new(self.client.clone(), name))
+    }
+
     pub fn infantry_load(&self, group: &Group) -> Result<(), Error> {
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -115,6 +120,10 @@ impl Unit {
 
     pub fn orientation(&self) -> Result<Orientation, Error> {
         self.request("unitOrientation")
+    }
+
+    pub fn life(&self) -> Result<f64, Error> {
+        self.request("unitLife")
     }
 }
 

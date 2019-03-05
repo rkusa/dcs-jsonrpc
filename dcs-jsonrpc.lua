@@ -104,6 +104,15 @@ function method_getZone(params)
     end
 end
 
+function method_getZones(params)
+    -- TODO: return error on missing params
+    local zones = {}
+    for _, zone in pairs(env.mission.triggers.zones) do
+        zones.insert(zones, zone.name)
+    end
+    return success(zones)
+end
+
 function method_getUserFlag(params)
     -- TODO: return error on missing params
     return success(trigger.misc.getUserFlag(params.flag))
@@ -444,8 +453,34 @@ function method_unitOrientation(params)
     end
 end
 
+function method_unitGroup(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return error("Unit does not exist")
+    end
+
+    local group = unit:getGroup()
+    if group == nil then
+        return error("Group does not exist")
+    end
+
+    return success(group:getName())
+end
+
+function method_unitLife(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return error("Unit does not exist")
+    end
+
+    return success(unit:getLife())
+end
+
+
 --
--- RPC Unit methods
+-- RPC Static methods
 --
 
 function method_addStatic(params)
