@@ -1,4 +1,5 @@
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 use crate::jsonrpc::Client;
 use crate::unit::UnitIterator;
@@ -217,7 +218,7 @@ pub struct PointData {
     pub alt: f64,
     pub alt_type: AltitudeType,
     pub name: String,
-    pub properties: Option<Value>,
+    // pub properties: Option<Value>,
     pub speed: f64,
     pub speed_locked: bool,
     pub task: Task,
@@ -240,6 +241,12 @@ pub enum Task {
         number: usize,
         auto: bool,
         params: EngageTargetsParams,
+    },
+    EngageTargetsInZone {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: EngageTargetsInZoneParams,
     },
     AttackGroup {
         enabled: bool,
@@ -270,52 +277,70 @@ pub enum Task {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComboTaskParams {
-    tasks: Vec<Task>,
+    pub tasks: Vec<Task>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EngageTargetsParams {
     #[serde(rename = "targetTypes")]
-    target_types: Vec<TargetType>,
-    priority: usize,
+    pub target_types: Vec<TargetType>,
+    pub priority: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngageTargetsInZoneParams {
+    pub target_types: Vec<TargetType>,
+    pub priority: usize,
+    pub x: f64,
+    pub y: f64,
+    pub zone_radius: usize, // in m
+                            // skipped: value
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttackGroupParams {
     #[serde(rename = "weaponType")]
-    weapon_type: usize, // TODO: flags?
+    pub weapon_type: usize, // TODO: flags?
     #[serde(rename = "groupId")]
-    group_id: usize, // TODO: directly provide Group type
+    pub group_id: usize, // TODO: directly provide Group type
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AttackUnitParams {
-    altitude_enabled: bool,
-    unit_id: usize,
-    attack_qty_limit: bool,
-    attack_qty: usize,
-    expend: String, // TODO: enum
-    altitude: f64,
-    direction_enabled: bool,
-    group_attack: bool,
-    weapon_type: usize, // TODO: flags?
-    direction: usize,   // TODO
+    pub altitude_enabled: bool,
+    pub unit_id: usize,
+    pub attack_qty_limit: bool,
+    pub attack_qty: usize,
+    pub expend: String, // TODO: enum
+    pub altitude: f64,
+    pub direction_enabled: bool,
+    pub group_attack: bool,
+    pub weapon_type: usize, // TODO: flags?
+    pub direction: usize,   // TODO
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WrappedActionParams {
-    action: Value, // TODO
+    pub action: Value, // TODO
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EngageTargetsKind {
     AntiShip,
+    CAS,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TargetType {
     Ships,
+    Helicopters,
+    #[serde(rename = "Ground Units")]
+    GroundUnits,
+    #[serde(rename = "Light armed ships")]
+    LightArmedShips,
+    Naval,
 }
 
 // known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks, livery_id,
@@ -439,6 +464,20 @@ pub enum TaskKind {
     GroundNothing,
     #[serde(rename = "Transport")]
     Transport,
+}
+
+impl PartialEq for Group {
+    fn eq(&self, other: &Group) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Group {}
+
+impl Hash for Group {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
 }
 
 impl Default for TaskKind {

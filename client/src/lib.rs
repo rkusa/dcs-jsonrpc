@@ -129,6 +129,15 @@ where
         })
     }
 
+    pub fn airbase(&self, name: &str) -> Result<Airbase, Error> {
+        let airbase = Airbase::new(self.client.clone(), name);
+        if airbase.exists()? {
+            Ok(airbase)
+        } else {
+            Err(Error::NonExistent)
+        }
+    }
+
     pub fn static_object(&self, name: &str) -> Result<Static, Error> {
         let staticobj = Static::new(self.client.clone(), name);
         if staticobj.exists()? {

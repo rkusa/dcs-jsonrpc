@@ -1,8 +1,9 @@
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 use crate::group::GroupIterator;
 use crate::jsonrpc::Client;
-use crate::{Error, Group, Position};
+use crate::{Coalition, Country, Error, Group, Position};
 
 #[derive(Clone, Serialize)]
 pub struct Unit {
@@ -124,6 +125,40 @@ impl Unit {
 
     pub fn life(&self) -> Result<f64, Error> {
         self.request("unitLife")
+    }
+
+    pub fn player_name(&self) -> Result<Option<String>, Error> {
+        self.request("unitPlayerName")
+    }
+
+    pub fn is_player(&self) -> Result<bool, Error> {
+        self.player_name().map(|r| r.is_some())
+    }
+
+    pub fn coalition(&self) -> Result<Coalition, Error> {
+        self.request("unitCoalition")
+    }
+
+    pub fn country(&self) -> Result<Country, Error> {
+        self.request("unitCountry")
+    }
+
+    pub fn destroy(self) -> Result<(), Error> {
+        self.client.notification("unitDestory", Some(&self))
+    }
+}
+
+impl PartialEq for Unit {
+    fn eq(&self, other: &Unit) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Unit {}
+
+impl Hash for Unit {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
     }
 }
 

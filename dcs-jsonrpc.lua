@@ -37,6 +37,14 @@ function staticByIdentifier(params)
     end
 end
 
+function airbaseByIdentifier(params)
+    if type(params.name) == "string" then
+        return Airbase.getByName(params.name)
+    else
+        return nil
+    end
+end
+
 --
 -- RPC methods
 --
@@ -477,6 +485,66 @@ function method_unitLife(params)
 
     return success(unit:getLife())
 end
+
+function method_unitPlayerName(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return error("Unit does not exist")
+    end
+
+    return success(unit:getPlayerName())
+end
+
+function method_unitCoalition(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return error("Unit does not exist")
+    else
+        return success(unit:getCoalition())
+    end
+end
+
+function method_unitCountry(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return error("Unit does not exist")
+    else
+        return success(unit:getCountry())
+    end
+end
+
+function method_unitDestory(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit ~= nil then
+        unit:destroy()
+    end
+    return success(nil)
+end
+
+--
+-- RPC Airbase methods
+--
+
+function method_airbaseExists(params)
+    -- TODO: return error on missing params
+    local airbase = airbaseByIdentifier(params)
+    return success(airbase ~= nil)
+end
+
+function method_airbasePosition(params)
+    -- TODO: return error on missing params
+    local airbase = airbaseByIdentifier(params)
+    if airbase == nil then
+        return error("Airbase does not exist")
+    else
+        return success(airbase:getPoint())
+    end
+end
+
 
 
 --

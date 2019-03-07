@@ -11,6 +11,7 @@ pub enum Error {
     UnitGone(String),
     StaticGone(String),
     ZoneGone(String),
+    NonExistent,
     NoData(String),
     AddGroupTimeout,
     AddStaticTimeout,
@@ -51,6 +52,7 @@ impl error::Error for Error {
             UnitGone(_) => "Unit does not exist anymore",
             StaticGone(_) => "Static does not exist anymore",
             ZoneGone(_) => "Zone does not exist",
+            NonExistent => "Airbase does not exist",
             NoData(_) => "No group data found",
             AddGroupTimeout => {
                 "A newly added group did not exist 1 second after its supposed spawn"
