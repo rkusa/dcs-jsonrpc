@@ -1,12 +1,14 @@
-use crate::error::Error;
+use crate::error::{assert_stack_size, Error};
 use crate::server::Server;
-use hlua51::{Lua, LuaFunction, LuaTable};
+use lua51_sys as ffi;
+use lua51_sys::lua_pop;
 use serde_json::Value;
+use std::ffi::{CStr, CString};
 
 static mut INITIALIZED: bool = false;
 static mut SERVER: Option<Server> = None;
 
-pub fn init(lua: &mut Lua<'_>) -> Result<(), Error> {
+pub fn init(l: *mut ffi::lua_State) -> Result<(), Error> {
     unsafe {
         if INITIALIZED {
             return Ok(());
@@ -20,9 +22,38 @@ pub fn init(lua: &mut Lua<'_>) -> Result<(), Error> {
     use log4rs::append::file::FileAppender;
     use log4rs::config::{Appender, Config, Logger, Root};
 
-    let config = if let Some(mut lfs) = lua.get::<LuaTable<_>, _>("lfs") {
-        let mut writedir: LuaFunction<_> = get!(lfs, "writedir")?;
-        let writedir: String = writedir.call()?;
+    // get lfs.writedir()
+    let writedir = unsafe {
+        ffi::lua_getfield(l, ffi::LUA_GLOBALSINDEX, const_cstr!("lfs").as_ptr());
+        if ffi::lua_istable(l, -1) {
+            ffi::lua_getfield(l, -1, const_cstr!("writedir").as_ptr());
+
+            // call writedir with 0 args and 1 expected result; this removes writedir from the stack
+            ffi::lua_call(l, 0, 1);
+            assert_eq!(ffi::lua_isstring(l, -1), 1);
+            let p_writedir = ffi::lua_tostring(l, -1);
+
+            let writedir = match CStr::from_ptr(p_writedir).to_str() {
+                Ok(s) => Some(s.to_string()),
+                Err(_) => {
+                    error!("Failed to read lfs.writedir()");
+                    None
+                }
+            };
+
+            // pop: fn call result and lfs
+            ffi::lua_pop(l, 2);
+
+            writedir
+        } else {
+            // pop: lfs
+            ffi::lua_pop(l, 1);
+
+            None
+        }
+    };
+
+    let config = if let Some(writedir) = writedir {
         let log_file = writedir + "Logs/dcsjsonrpc.log";
 
         let requests = FileAppender::builder()
@@ -49,12 +80,12 @@ pub fn init(lua: &mut Lua<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn start(mut lua: &mut Lua<'_>) -> Result<(), Error> {
+pub fn start(l: *mut ffi::lua_State) -> Result<(), Error> {
     if unsafe { SERVER.is_some() } {
         return Ok(());
     }
 
-    init(&mut lua)?;
+    init(l)?;
 
     info!("Starting ...");
 
@@ -74,31 +105,108 @@ pub fn stop() {
     }
 }
 
-pub fn try_next(lua: &mut Lua<'_>) -> Result<bool, Error> {
-    let mut callback: LuaFunction<_> = pop!(lua, "callback")?;
+pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
+    // expect 1 argument, ignore other ones
+    ffi::lua_settop(l, 1);
 
-    if let Some(server) = unsafe { &SERVER } {
+    // read callback argument
+    if !ffi::lua_isfunction(l, -1) {
+        ffi::lua_settop(l, 0);
+        return Err(Error::ArgumentType(
+            "callback".to_string(),
+            "function".to_string(),
+        ));
+    }
+
+    if let Some(server) = &SERVER {
         if let Some(mut next) = server.try_next() {
-            let params = next.req.take_params().map(|params| params.to_string());
-            let mut result: LuaTable<_> = callback.call_with_args((next.req.method(), params))?;
-            if let Some(err) = result.get("error") {
-                next.error(err);
-            } else if let Some(res) = result.get::<String, _, _>("result") {
+            ffi::lua_pushstring(l, cstr(next.req.method()));
+            match next.req.take_params() {
+                Some(p) => {
+                    let p = serde_json::to_string(&p).unwrap();
+                    ffi::lua_pushstring(l, cstr(p));
+                }
+                None => ffi::lua_pushnil(l),
+            }
+
+            ffi::lua_call(l, 2, 1); // 2 args, 1 result
+
+            if !ffi::lua_istable(l, -1) {
+                ffi::lua_settop(l, 0);
+                return Err(Error::ArgumentType(
+                    "result".to_string(),
+                    "table".to_string(),
+                ));
+            }
+
+            // check whether we've received an error
+            ffi::lua_getfield(l, -1, const_cstr!("error").as_ptr());
+            if ffi::lua_isstring(l, -1) == 1 {
+                let error = CStr::from_ptr(ffi::lua_tostring(l, -1))
+                    .to_str()?
+                    .to_string();
+                next.error(error);
+
+                ffi::lua_settop(l, 0);
+                return Ok(true);
+            }
+
+            // pop error
+            lua_pop(l, 1);
+
+            // check whether we've received a result
+            ffi::lua_getfield(l, -1, const_cstr!("result").as_ptr());
+            if ffi::lua_isstring(l, -1) == 1 {
+                let res = CStr::from_ptr(ffi::lua_tostring(l, -1))
+                    .to_str()?
+                    .to_string();
                 let res: Value = serde_json::from_str(&res)
                     .map_err(|err| Error::SerializeResult(err, res.to_string()))?;
                 next.success(res);
             }
 
+            ffi::lua_settop(l, 0);
             return Ok(true);
         }
     }
 
+    ffi::lua_settop(l, 0);
     Ok(false)
 }
 
-pub fn broadcast(lua: &mut Lua<'_>) -> Result<(), Error> {
-    let payload: String = pop!(lua, "payload")?;
-    let channel: String = pop!(lua, "channel")?;
+pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), Error> {
+    let (payload, channel) = unsafe {
+        // expect 2 arguments, ignore other ones
+        ffi::lua_settop(l, 2);
+
+        // read payload argument
+        if ffi::lua_isstring(l, -1) == 0 {
+            ffi::lua_settop(l, 0);
+            return Err(Error::ArgumentType(
+                "channel".to_string(),
+                "string".to_string(),
+            ));
+        }
+        let payload = CStr::from_ptr(ffi::lua_tostring(l, -1))
+            .to_str()?
+            .to_string();
+
+        // read channel argument
+        if ffi::lua_isstring(l, -2) == 0 {
+            ffi::lua_settop(l, 0);
+            return Err(Error::ArgumentType(
+                "payload".to_string(),
+                "string".to_string(),
+            ));
+        }
+        let channel = CStr::from_ptr(ffi::lua_tostring(l, -2))
+            .to_str()?
+            .to_string();
+
+        ffi::lua_settop(l, 0);
+        (payload, channel)
+    };
+
     let payload: Option<Value> =
         serde_json::from_str(&payload).map_err(|err| Error::SerializeBroadcast(err, payload))?;
 
@@ -107,4 +215,11 @@ pub fn broadcast(lua: &mut Lua<'_>) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+pub extern "C" fn cstr<T: Into<Vec<u8>>>(t: T) -> *const libc::c_char {
+    let s = CString::new(t).unwrap();
+    let p = s.as_ptr();
+    std::mem::forget(s);
+    p
 }

@@ -1,16 +1,15 @@
 use std::{error, fmt};
 
-type CallbackExecutionError =
-    hlua51::LuaFunctionCallError<hlua51::TuplePushError<hlua51::Void, hlua51::Void>>;
+use lua51_sys as ffi;
 
 #[derive(Debug)]
 pub enum Error {
-    Lua(::hlua51::LuaError),
-    Undefined(String),
+    ArgumentType(String, String),
     SerializeResult(serde_json::Error, String),
     SerializeBroadcast(serde_json::Error, String),
-    CallbackExecution(CallbackExecutionError),
     Io(std::io::Error),
+    Utf8(std::str::Utf8Error),
+    StackSize(usize, usize),
 }
 
 impl fmt::Display for Error {
@@ -19,14 +18,15 @@ impl fmt::Display for Error {
         use std::error::Error;
 
         match self {
-            Undefined(key) => write!(
-                f,
-                "Error: Trying to access undefined lua global or table key: {}",
-                key
-            )?,
+            ArgumentType(name, kind) => {
+                write!(f, "Expected argument {} to be of type {}", name, kind)?
+            }
             SerializeResult(_, ref res) => write!(f, "Error serializing result: {}", res)?,
             SerializeBroadcast(_, ref res) => {
                 write!(f, "Error serializing broadcast payload: {}", res)?
+            }
+            StackSize(expected, got) => {
+                write!(f, "Expected a Lua stack size of {}, got {}", expected, got)?
             }
             _ => write!(f, "Error: {}", self.description())?,
         }
@@ -46,12 +46,12 @@ impl error::Error for Error {
         use self::Error::*;
 
         match *self {
-            Lua(_) => "Lua error",
-            Undefined(_) => "Trying to access lua gobal or table key that does not exist",
+            ArgumentType(_, _) => "Wrong argument type",
             SerializeResult(_, _) => "Error serializing RPC result",
             SerializeBroadcast(_, _) => "Error serializing broadcast payload",
-            CallbackExecution(_) => "Error executing RPC callback",
             Io(_) => "Error in TCP connection",
+            Utf8(_) => "UTF8 error in cstr",
+            StackSize(_, _) => "Unexpected Lua stack size",
         }
     }
 
@@ -59,29 +59,32 @@ impl error::Error for Error {
         use self::Error::*;
 
         match *self {
-            Lua(ref err) => Some(err),
             SerializeResult(ref err, _) => Some(err),
             SerializeBroadcast(ref err, _) => Some(err),
             Io(ref err) => Some(err),
+            Utf8(ref err) => Some(err),
             _ => None,
         }
     }
 }
 
-impl From<::hlua51::LuaError> for Error {
-    fn from(err: ::hlua51::LuaError) -> Self {
-        Error::Lua(err)
-    }
-}
-
-impl From<CallbackExecutionError> for Error {
-    fn from(err: CallbackExecutionError) -> Self {
-        Error::CallbackExecution(err)
+pub fn assert_stack_size(l: *mut ffi::lua_State, expected: usize) -> Result<(), Error> {
+    let curr = unsafe { ffi::lua_gettop(l) } as usize;
+    if curr != expected {
+        Err(Error::StackSize(expected, curr))
+    } else {
+        Ok(())
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
         Error::Io(err)
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(err: std::str::Utf8Error) -> Self {
+        Error::Utf8(err)
     }
 }

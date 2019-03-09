@@ -142,7 +142,9 @@ async fn handle_client(
                 debug!("Responding with: {:?}", res);
                 match serde_json::to_string(&res) {
                     Ok(res) => {
-                        await!(sink.send_async(res));
+                        if let Err(err) = await!(sink.send_async(res)) {
+                            error!("Error sending message: {}", err);
+                        }
                     }
                     Err(err) => {
                         error!("Error serializing outgoing message: {}", err);

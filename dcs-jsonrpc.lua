@@ -604,14 +604,12 @@ function method_staticData(params)
     end
 
     local id = tonumber(staticobj:getID())
-    env.info("[JSONRPC] SF: "..type(id))
     for _, country in pairs(countries) do
         for kind, category in pairs(country) do
             if kind == 'static' then
                 if type(category) == 'table' and type(category.group) == 'table' then
                     for _, groupData in pairs(category.group) do
                         for _, unit in pairs(groupData.units) do
-                            env.info("[JSONRPC] ID: "..type(unit.unitId).." "..tostring(unit.unitId == id))
                             if unit.unitId == id then
                                 unit.name = dict_value(unit.name)
                                 -- for statics return the first unit
@@ -758,7 +756,7 @@ end
 -- RPC request handler
 --
 function handleRequest(method, params)
-    --env.info("[JSON-RPC] receiving method "..method.." with params: "..tostring(params))
+    -- env.info"[JSONRPC] receiving method "..method.." with params: "..tostring(params))
 
     local fnName = "method_"..method
     local fn = _G[fnName]
@@ -769,7 +767,7 @@ function handleRequest(method, params)
     if type(fn) == "function" then
         local ok, result = pcall(fn, params)
         if not ok then
-            env.error("[JSON-RPC] error executing "..method.." with params: "..tostring(params)..": "..tostring(result))
+            env.error("[JSONRPC] error executing "..method.." with params: "..tostring(params)..": "..tostring(result))
         end
 
         return result
@@ -783,9 +781,16 @@ end
 --
 -- execute JSON-RPC requests every 0.02 seconds
 --
-timer.scheduleFunction(function(arg, time)
+function next()
     while jsonrpc.next(handleRequest) do
         -- TODO: restrict handled requests per tick?
+    end
+end
+
+timer.scheduleFunction(function()
+    local ok, err = pcall(next)
+    if not ok then
+        env.error("[JSONRPC] Error retrieving next command: "..tostring(err))
     end
 
     return timer.getTime() + .02 -- return time of next call
@@ -802,8 +807,13 @@ function identifier(obj)
 end
 
 function onEvent(event)
-    
-    if event.id == world.event.S_EVENT_SHOT then
+    --env.info("[JSONRPC] Event: "..inspect(event))
+
+    if (event.id ~= world.event.S_EVENT_MISSION_START and event.id ~= world.event.S_EVENT_MISSION_END) and event.initiator == nil then
+        env.warn("[JSONRPC] Event: ignoring event with missing initiator")
+
+    elseif event.id == world.event.S_EVENT_SHOT then
+
         jsonrpc.broadcast("Shot", json:encode({
             time = event.time,
             initiator = identifier(event.initiator),
@@ -983,8 +993,6 @@ function onEvent(event)
         }))
 
     end
-
-    --env.info("[JSONRPC] Event: "..inspect(event))
 end
 
 local eventHandler = {}

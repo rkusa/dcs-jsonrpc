@@ -12,8 +12,6 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
-mod macros;
 mod error;
 mod module;
 mod server;
@@ -21,15 +19,14 @@ mod server;
 use std::ffi::CString;
 use std::ptr;
 
-use hlua51::Lua;
+use crate::error::assert_stack_size;
 use libc::c_int;
 use lua51_sys as ffi;
 
 #[no_mangle]
-pub extern "C" fn start(state: *mut ffi::lua_State) -> c_int {
-    let mut lua = unsafe { Lua::from_existing_state(state, false) };
-    if let Err(err) = module::start(&mut lua) {
-        return report_error(state, &err.to_string());
+pub extern "C" fn start(l: *mut ffi::lua_State) -> c_int {
+    if let Err(err) = module::start(l).and_then(|_| assert_stack_size(l, 0)) {
+        return report_error(l, &err.to_string());
     }
 
     0
@@ -43,33 +40,32 @@ pub extern "C" fn stop(_state: *mut ffi::lua_State) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn try_next(state: *mut ffi::lua_State) -> c_int {
-    let mut lua = unsafe { Lua::from_existing_state(state, false) };
-    match module::try_next(&mut lua) {
+pub extern "C" fn try_next(l: *mut ffi::lua_State) -> c_int {
+    match unsafe { module::try_next(l).and_then(|r| assert_stack_size(l, 0).map(|_| r)) } {
         Ok(had_next) => {
-            unsafe { ffi::lua_pushboolean(state, had_next as c_int) }
+            unsafe { ffi::lua_pushboolean(l, had_next as c_int) }
             1
         }
-        Err(err) => report_error(state, &err.to_string()),
+        Err(err) => report_error(l, &err.to_string()),
     }
 }
 
 #[no_mangle]
-pub extern "C" fn broadcast(state: *mut ffi::lua_State) -> c_int {
-    let mut lua = unsafe { Lua::from_existing_state(state, false) };
-    if let Err(err) = module::broadcast(&mut lua) {
-        return report_error(state, &err.to_string());
+pub extern "C" fn broadcast(l: *mut ffi::lua_State) -> c_int {
+    if let Err(err) = module::broadcast(l).and_then(|_| assert_stack_size(l, 0)) {
+        return report_error(l, &err.to_string());
     }
 
     0
 }
 
-fn report_error(state: *mut ffi::lua_State, msg: &str) -> c_int {
-    let msg = CString::new(msg).unwrap();
+fn report_error(l: *mut ffi::lua_State, msg: &str) -> c_int {
+    error!("{}", msg);
 
+    let msg = CString::new(msg).unwrap();
     unsafe {
-        ffi::lua_pushstring(state, msg.as_ptr());
-        ffi::lua_error(state);
+        ffi::lua_pushstring(l, msg.as_ptr());
+        ffi::lua_error(l);
     }
 
     0
@@ -80,19 +76,19 @@ fn report_error(state: *mut ffi::lua_State, msg: &str) -> c_int {
 pub unsafe extern "C" fn luaopen_dcsjsonrpc(state: *mut ffi::lua_State) -> c_int {
     let registration = &[
         ffi::luaL_Reg {
-            name: cstr!("start"),
+            name: const_cstr!("start").as_ptr(),
             func: Some(start),
         },
         ffi::luaL_Reg {
-            name: cstr!("stop"),
+            name: const_cstr!("stop").as_ptr(),
             func: Some(stop),
         },
         ffi::luaL_Reg {
-            name: cstr!("next"),
+            name: const_cstr!("next").as_ptr(),
             func: Some(try_next),
         },
         ffi::luaL_Reg {
-            name: cstr!("broadcast"),
+            name: const_cstr!("broadcast").as_ptr(),
             func: Some(broadcast),
         },
         ffi::luaL_Reg {
@@ -101,7 +97,12 @@ pub unsafe extern "C" fn luaopen_dcsjsonrpc(state: *mut ffi::lua_State) -> c_int
         },
     ];
 
-    ffi::luaL_openlib(state, cstr!("dcsjsonrpc"), registration.as_ptr(), 0);
+    ffi::luaL_openlib(
+        state,
+        const_cstr!("dcsjsonrpc").as_ptr(),
+        registration.as_ptr(),
+        0,
+    );
 
     1
 }
