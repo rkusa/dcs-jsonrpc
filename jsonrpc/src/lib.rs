@@ -41,10 +41,8 @@ pub extern "C" fn stop(_state: *mut ffi::lua_State) -> c_int {
 
 #[no_mangle]
 pub extern "C" fn try_next(l: *mut ffi::lua_State) -> c_int {
-    let mem = unsafe { ffi::lua_gc(l, ffi::LUA_GCCOUNT as i32, 0) };
-    warn!("Mem in use: {} kB", mem);
-
-    return 0;
+    //    let mem = unsafe { ffi::lua_gc(l, ffi::LUA_GCCOUNT as i32, 0) };
+    //    warn!("Mem in use: {} kB", mem);
 
     unsafe { ffi::lua_gc(l, ffi::LUA_GCSTOP as i32, 0) };
 
@@ -67,11 +65,17 @@ pub extern "C" fn try_next(l: *mut ffi::lua_State) -> c_int {
 
 #[no_mangle]
 pub extern "C" fn broadcast(l: *mut ffi::lua_State) -> c_int {
-    if let Err(err) = module::broadcast(l).and_then(|_| assert_stack_size(l, 0)) {
-        return report_error(l, &err.to_string());
-    }
+    unsafe { ffi::lua_gc(l, ffi::LUA_GCSTOP as i32, 0) };
 
-    0
+    let result = if let Err(err) = module::broadcast(l).and_then(|_| assert_stack_size(l, 0)) {
+        report_error(l, &err.to_string())
+    } else {
+        0
+    };
+
+    unsafe { ffi::lua_gc(l, ffi::LUA_GCRESTART as i32, 0) };
+
+    result
 }
 
 fn report_error(l: *mut ffi::lua_State, msg: &str) -> c_int {
