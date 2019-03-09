@@ -3,7 +3,7 @@ env.info("[JSONRPC] loading ...")
 --
 -- load  JSON
 --
-local jsonlib = lfs.writedir() .. "Scripts\\GAW\\json.lua"
+local jsonlib = lfs.writedir() .. "Scripts\\dcs-jsonrpc\\json.lua"
 local json = loadfile(jsonlib)()
 
 --
@@ -782,7 +782,12 @@ end
 -- execute JSON-RPC requests every 0.02 seconds
 --
 function next()
+    local i = 0
     while jsonrpc.next(handleRequest) do
+        i = i + 1
+        if i > 10 then
+            break
+        end
         -- TODO: restrict handled requests per tick?
     end
 end
@@ -813,7 +818,6 @@ function onEvent(event)
         env.warn("[JSONRPC] Event: ignoring event with missing initiator")
 
     elseif event.id == world.event.S_EVENT_SHOT then
-
         jsonrpc.broadcast("Shot", json:encode({
             time = event.time,
             initiator = identifier(event.initiator),
@@ -821,17 +825,19 @@ function onEvent(event)
         }))
 
     elseif event.id == world.event.S_EVENT_HIT then
-        local target ={
-            id = tonumber(event.target:getID()),
-            name = event.target:getName() or "",
-            category = event.target:getCategory(),
-        }
-        jsonrpc.broadcast("Hit", json:encode({
-            time = event.time,
-            initiator = identifier(event.initiator),
-            weapon = { id = event.weapon:getName() },
-            target = target,
-        }))
+        if event.target ~= nil then
+            local target = {
+                id = tonumber(event.target:getID()),
+                name = event.target:getName() or "",
+                category = event.target:getCategory(),
+            }
+            jsonrpc.broadcast("Hit", json:encode({
+                time = event.time,
+                initiator = identifier(event.initiator),
+                weapon = { id = event.weapon:getName() },
+                target = target,
+            }))
+        end
 
     elseif event.id == world.event.S_EVENT_TAKEOFF then
         jsonrpc.broadcast("Takeoff", json:encode({
@@ -997,10 +1003,10 @@ end
 
 local eventHandler = {}
 function eventHandler:onEvent(event)
-    local ok, err = pcall(onEvent, event)
-    if not ok then
-        env.error("[JSONRPC] Error in event handler: "..tostring(err))
-    end
+    --local ok, err = pcall(onEvent, event)
+    --if not ok then
+    --    env.error("[JSONRPC] Error in event handler: "..tostring(err))
+    --end
 end
 world.addEventHandler(eventHandler)
 

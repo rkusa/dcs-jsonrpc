@@ -112,7 +112,7 @@ impl fmt::Display for RpcError {
 
 impl error::Error for RpcError {
     fn description(&self) -> &str {
-        "RPC retunred error"
+        "RPC returned error"
     }
 
     fn cause(&self) -> Option<&dyn error::Error> {

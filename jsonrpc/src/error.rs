@@ -1,6 +1,6 @@
 use std::{error, fmt};
 
-use lua51_sys as ffi;
+use lua51 as ffi;
 
 #[derive(Debug)]
 pub enum Error {

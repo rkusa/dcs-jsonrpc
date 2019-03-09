@@ -23,7 +23,9 @@ impl fmt::Display for Error {
         use std::error::Error;
 
         match self {
-            GroupGone(ref id) | UnitGone(ref id) | StaticGone(ref id) => write!(f, "{} does not exist anymore", id)?,
+            GroupGone(ref id) => write!(f, "Group {} does not exist anymore", id)?,
+            UnitGone(ref id) => write!(f, "Unit {} does not exist anymore", id)?,
+            StaticGone(ref id) => write!(f, "Static {} does not exist anymore", id)?,
             NoData(ref name) => write!(f, "No data for {} found (there will only be data for groups defined in the Mission Editor)", name)?,
             _ => write!(f, "Error: {}", self.description())?,
         }

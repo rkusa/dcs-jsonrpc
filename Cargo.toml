@@ -4,5 +4,6 @@ members = [
     "common",
     "example",
     "jsonrpc",
+    "lua51",
     "repl",
 ]

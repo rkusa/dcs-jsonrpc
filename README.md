@@ -42,11 +42,13 @@ Contributions are welcome, especially adding more RPC methods (they are added in
 3. Create a DCS mission, create a trigger type `Mission Start` with the Action `Do Script` and the following script:
 
     ```lua
-    package.cpath = [[M:/Development/dcs-jsonrpc/target/debug/?.dll;]]
-    dofile("M:/Development/dcs-jsonrpc/dcs-jsonrpc.lua")
+    package.cpath = package.cpath..lfs.writedir()..[[Scripts\dcs-jsonrpc\?.dll;]]
+    dofile(lfs.writedir()..[[Scripts\dcs-jsonrpc\dcs-jsonrpc.lua]])
     ```
     
     (don't forget to adjust `M:/Development/dcs-jsonrpc` to the path where you have checked out this repository)
+    
+    (`New-Item -ItemType SymbolicLink -Name dcs-jsonrpc.lua -Value M:/Development/dcs-jsonrpc/dcs-jsonrpc.lua`)
 
 4. That's it
 

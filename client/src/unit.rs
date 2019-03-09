@@ -128,7 +128,8 @@ impl Unit {
     }
 
     pub fn player_name(&self) -> Result<Option<String>, Error> {
-        self.request("unitPlayerName")
+        self.client
+            .request::<_, Option<String>>("unitPlayerName", Some(&self))
     }
 
     pub fn is_player(&self) -> Result<bool, Error> {

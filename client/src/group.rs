@@ -248,6 +248,12 @@ pub enum Task {
         auto: bool,
         params: EngageTargetsInZoneParams,
     },
+    EngageGroup {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: EngageGroupParams,
+    },
     AttackGroup {
         enabled: bool,
         number: usize,
@@ -273,6 +279,12 @@ pub enum Task {
         auto: bool,
         params: Value, // TODO
     },
+    Orbit {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: OrbitParams,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -296,6 +308,15 @@ pub struct EngageTargetsInZoneParams {
     pub y: f64,
     pub zone_radius: usize, // in m
                             // skipped: value
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngageGroupParams {
+    pub group_id: usize,
+    pub priority: usize,
+    pub weapon_type: usize, // TODO: flags?
+    pub visible: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -327,9 +348,26 @@ pub struct WrappedActionParams {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrbitParams {
+    altitude: f64,
+    altitude_edited: bool,
+    pattern: OrbitKind,
+    speed: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum OrbitKind {
+    Circle,
+    #[serde(rename = "Race-Track")]
+    RaceTrack,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EngageTargetsKind {
     AntiShip,
     CAS,
+    CAP,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -341,6 +379,7 @@ pub enum TargetType {
     #[serde(rename = "Light armed ships")]
     LightArmedShips,
     Naval,
+    Air,
 }
 
 // known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks, livery_id,

@@ -1,7 +1,7 @@
-use crate::error::{assert_stack_size, Error};
+use crate::error::Error;
 use crate::server::Server;
-use lua51_sys as ffi;
-use lua51_sys::lua_pop;
+use lua51 as ffi;
+use lua51::lua_pop;
 use serde_json::Value;
 use std::ffi::{CStr, CString};
 
@@ -63,7 +63,7 @@ pub fn init(l: *mut ffi::lua_State) -> Result<(), Error> {
 
         Config::builder()
             .appender(Appender::builder().build("file", Box::new(requests)))
-            .logger(Logger::builder().build("dcsjsonrpc", LevelFilter::Debug))
+            .logger(Logger::builder().build("dcsjsonrpc", LevelFilter::Info))
             .build(Root::builder().appender("file").build(LevelFilter::Off))
             .unwrap()
     } else {
@@ -120,14 +120,19 @@ pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
 
     if let Some(server) = &SERVER {
         if let Some(mut next) = server.try_next() {
-            ffi::lua_pushstring(l, cstr(next.req.method()));
+            let method = next.req.method();
+            warn!("Pushing String: {}", method);
+            push_string(l, method);
             match next.req.take_params() {
                 Some(p) => {
                     let p = serde_json::to_string(&p).unwrap();
-                    ffi::lua_pushstring(l, cstr(p));
+                    warn!("Pushing String: {}", p);
+                    push_string(l, p);
                 }
                 None => ffi::lua_pushnil(l),
             }
+
+            warn!("Done Pushing");
 
             ffi::lua_call(l, 2, 1); // 2 args, 1 result
 
@@ -217,9 +222,19 @@ pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), Error> {
     Ok(())
 }
 
-pub extern "C" fn cstr<T: Into<Vec<u8>>>(t: T) -> *const libc::c_char {
-    let s = CString::new(t).unwrap();
-    let p = s.as_ptr();
-    std::mem::forget(s);
-    p
+//pub extern "C" fn cstr<T: Into<Vec<u8>>>(t: T) -> *const libc::c_char {
+//    let s = CString::new(t).unwrap();
+//    s.as_ptr()
+//}
+
+pub fn push_string<T: Into<Vec<u8>>>(l: *mut ffi::lua_State, t: T) {
+    let cs = CString::new(t).unwrap();
+    let ptr = cs.into_raw();
+
+    unsafe {
+        ffi::lua_pushstring(l, ptr);
+
+        // retake pointer to free memory
+        let _ = CString::from_raw(ptr);
+    }
 }

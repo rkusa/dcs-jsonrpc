@@ -16,12 +16,12 @@ mod error;
 mod module;
 mod server;
 
-use std::ffi::CString;
 use std::ptr;
 
 use crate::error::assert_stack_size;
+use crate::module::push_string;
 use libc::c_int;
-use lua51_sys as ffi;
+use lua51 as ffi;
 
 #[no_mangle]
 pub extern "C" fn start(l: *mut ffi::lua_State) -> c_int {
@@ -41,13 +41,28 @@ pub extern "C" fn stop(_state: *mut ffi::lua_State) -> c_int {
 
 #[no_mangle]
 pub extern "C" fn try_next(l: *mut ffi::lua_State) -> c_int {
-    match unsafe { module::try_next(l).and_then(|r| assert_stack_size(l, 0).map(|_| r)) } {
-        Ok(had_next) => {
-            unsafe { ffi::lua_pushboolean(l, had_next as c_int) }
-            1
-        }
-        Err(err) => report_error(l, &err.to_string()),
-    }
+    let mem = unsafe { ffi::lua_gc(l, ffi::LUA_GCCOUNT as i32, 0) };
+    warn!("Mem in use: {} kB", mem);
+
+    return 0;
+
+    unsafe { ffi::lua_gc(l, ffi::LUA_GCSTOP as i32, 0) };
+
+    let result =
+        match unsafe { module::try_next(l).and_then(|r| assert_stack_size(l, 0).map(|_| r)) } {
+            Ok(had_next) => {
+                unsafe { ffi::lua_pushboolean(l, had_next as c_int) }
+                1
+            }
+            Err(err) => {
+                warn!("Push error");
+                report_error(l, &err.to_string())
+            }
+        };
+
+    unsafe { ffi::lua_gc(l, ffi::LUA_GCRESTART as i32, 0) };
+
+    result
 }
 
 #[no_mangle]
@@ -62,9 +77,8 @@ pub extern "C" fn broadcast(l: *mut ffi::lua_State) -> c_int {
 fn report_error(l: *mut ffi::lua_State, msg: &str) -> c_int {
     error!("{}", msg);
 
-    let msg = CString::new(msg).unwrap();
     unsafe {
-        ffi::lua_pushstring(l, msg.as_ptr());
+        push_string(l, msg);
         ffi::lua_error(l);
     }
 
