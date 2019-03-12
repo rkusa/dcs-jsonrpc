@@ -29,7 +29,7 @@ enum_number!(GroupCategory {
 });
 
 impl Group {
-    pub(crate) fn new<N: Into<String>>(client: Client, name: N) -> Self {
+    pub fn new<N: Into<String>>(client: Client, name: N) -> Self {
         Group {
             client,
             name: name.into(),
@@ -167,7 +167,7 @@ pub struct AircraftGroupData {
     //    #[serde(rename = "groupId", skip_serializing)]
     //    pub id: u64,
     pub communication: bool,
-    pub frequency: u16,
+    pub frequency: f64,
     pub hidden: bool,
     pub modulation: i64,
     pub name: String,
@@ -285,6 +285,12 @@ pub enum Task {
         auto: bool,
         params: OrbitParams,
     },
+    Land {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: LandParams,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -350,17 +356,21 @@ pub struct WrappedActionParams {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "id")]
 pub enum Action {
-    Script {
-        params: ScriptParams,
-    },
-    EPLRS {
-        params: EplrsParams
-    }
+    Script { params: ScriptParams },
+    EPLRS { params: EplrsParams },
+    Option { params: OptionParams },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScriptParams {
     pub command: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OptionParams {
+    pub name: u64,
+    pub value: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -377,6 +387,15 @@ pub struct OrbitParams {
     altitude_edited: bool,
     pattern: OrbitKind,
     speed: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LandParams {
+    duration: u64,
+    duration_flag: bool,
+    x: f64,
+    y: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -466,6 +485,7 @@ pub enum WaypointType {
     TakeOff,
     TakeOffParking,
     TakeOffParkingHot,
+    TakeOffGround,
     #[serde(rename = "Turning Point")]
     TurningPoint,
 }
@@ -486,6 +506,8 @@ pub enum WaypointAction {
     TakeOffParking,
     #[serde(rename = "From Parking Area Hot")]
     TakeOffParkingHot,
+    #[serde(rename = "From Ground Area")]
+    TakeOffGround,
     #[serde(rename = "Turning Point")]
     TurningPoint,
     #[serde(rename = "Fly Over Point")]

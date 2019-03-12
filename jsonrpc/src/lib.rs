@@ -52,9 +52,7 @@ pub extern "C" fn try_next(l: *mut ffi::lua_State) -> c_int {
                 unsafe { ffi::lua_pushboolean(l, had_next as c_int) }
                 1
             }
-            Err(err) => {
-                report_error(l, &err.to_string())
-            }
+            Err(err) => report_error(l, &err.to_string()),
         };
 
     unsafe { ffi::lua_gc(l, ffi::LUA_GCRESTART as i32, 0) };

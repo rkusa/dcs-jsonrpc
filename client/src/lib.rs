@@ -102,6 +102,10 @@ where
         }
     }
 
+    pub fn group_unchecked(&self, name: &str) -> Group {
+        Group::new(self.client.clone(), name)
+    }
+
     /// Returns an iterator that yields all groups for the given `coalition` and `category`.
     pub fn groups(
         &self,

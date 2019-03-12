@@ -59,7 +59,7 @@ where
         /// The unit that landed.
         initiator: Unit,
         /// The airbase, farp or ship the unit landed at.
-        place: Airbase,
+        place: Option<Airbase>,
     },
 
     /// Occurs when an aircraft crashes into the ground and is completely destroyed.
@@ -309,7 +309,7 @@ pub(crate) enum RawEvent {
     Land {
         time: f64,
         initiator: String,
-        place: String,
+        place: Option<String>,
     },
 
     Crash {
@@ -499,7 +499,7 @@ impl RawEvent {
             } => Event::Land {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
-                place: Airbase::new(client.clone(), place),
+                place: place.map(|place| Airbase::new(client.clone(), place)),
             },
             RawEvent::Crash { time, initiator } => Event::Crash {
                 time,
@@ -656,7 +656,13 @@ where
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] {} landed at {}", time, initiator, place),
+            } => write!(
+                f,
+                "[{}] {} landed at {}",
+                time,
+                initiator,
+                place.as_ref().map(|a| a.name()).unwrap_or("ground")
+            ),
             Crash { time, initiator } => write!(f, "[{}] {} crashed", time, initiator),
             Ejection { time, initiator } => write!(f, "[{}] {} ejected", time, initiator),
             Refueling { time, initiator } => {
