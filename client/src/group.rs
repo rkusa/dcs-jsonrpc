@@ -344,7 +344,30 @@ pub struct AttackUnitParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WrappedActionParams {
-    pub action: Value, // TODO
+    pub action: Action,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "id")]
+pub enum Action {
+    Script {
+        params: ScriptParams,
+    },
+    EPLRS {
+        params: EplrsParams
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScriptParams {
+    pub command: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EplrsParams {
+    pub group_id: usize,
+    pub value: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

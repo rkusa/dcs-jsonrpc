@@ -53,7 +53,6 @@ pub extern "C" fn try_next(l: *mut ffi::lua_State) -> c_int {
                 1
             }
             Err(err) => {
-                warn!("Push error");
                 report_error(l, &err.to_string())
             }
         };

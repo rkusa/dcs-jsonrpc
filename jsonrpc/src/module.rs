@@ -121,18 +121,14 @@ pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
     if let Some(server) = &SERVER {
         if let Some(mut next) = server.try_next() {
             let method = next.req.method();
-            warn!("Pushing String: {}", method);
             push_string(l, method);
             match next.req.take_params() {
                 Some(p) => {
                     let p = serde_json::to_string(&p).unwrap();
-                    warn!("Pushing String: {}", p);
                     push_string(l, p);
                 }
                 None => ffi::lua_pushnil(l),
             }
-
-            warn!("Done Pushing");
 
             ffi::lua_call(l, 2, 1); // 2 args, 1 result
 

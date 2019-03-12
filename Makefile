@@ -14,4 +14,8 @@ example:
 repl:
 	cd repl && cargo run
 
+release:
+	cargo build --release
+	powershell copy target/release/dcsjsonrpc.dll "'M:\Saved Games\DCS.openbeta\Scripts\dcs-jsonrpc'"
+
 .PHONY: example repl

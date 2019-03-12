@@ -12,6 +12,14 @@ pub struct Unit {
     name: String,
 }
 
+enum_number!(UnitCategory {
+    Airplane = 0,
+    Helicopter = 1,
+    Ground = 2,
+    Ship = 3,
+    Structure = 4,
+});
+
 impl Unit {
     pub(crate) fn new<N: Into<String>>(client: Client, name: N) -> Self {
         Unit {
@@ -142,6 +150,10 @@ impl Unit {
 
     pub fn country(&self) -> Result<Country, Error> {
         self.request("unitCountry")
+    }
+
+    pub fn category(&self) -> Result<UnitCategory, Error> {
+        self.request("unitCategory")
     }
 
     pub fn destroy(self) -> Result<(), Error> {

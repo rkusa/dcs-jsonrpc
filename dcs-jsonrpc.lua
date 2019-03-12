@@ -5,12 +5,14 @@ env.info("[JSONRPC] loading ...")
 --
 local jsonlib = lfs.writedir() .. "Scripts\\dcs-jsonrpc\\json.lua"
 local json = loadfile(jsonlib)()
+_G.json = json
 
 --
 -- load and start dcs-jsonrpc
 --
 package.loaded["dcsjsonrpc"] = nil
 local jsonrpc = require "dcsjsonrpc"
+_G.jsonrpc = jsonrpc
 jsonrpc.start()
 
 function groupByIdentifier(params)
@@ -516,6 +518,16 @@ function method_unitCountry(params)
     end
 end
 
+function method_unitCategory(params)
+    -- TODO: return error on missing params
+    local unit = unitByIdentifier(params)
+    if unit == nil then
+        return error("Unit does not exist")
+    else
+        return success(unit:getCategory())
+    end
+end
+
 function method_unitDestory(params)
     -- TODO: return error on missing params
     local unit = unitByIdentifier(params)
@@ -1003,10 +1015,10 @@ end
 
 local eventHandler = {}
 function eventHandler:onEvent(event)
-    --local ok, err = pcall(onEvent, event)
-    --if not ok then
-    --    env.error("[JSONRPC] Error in event handler: "..tostring(err))
-    --end
+    local ok, err = pcall(onEvent, event)
+    if not ok then
+        env.error("[JSONRPC] Error in event handler: "..tostring(err))
+    end
 end
 world.addEventHandler(eventHandler)
 

@@ -35,7 +35,7 @@ pub use self::menu::*;
 pub use self::position::Position;
 pub use self::scenery::Scenery;
 pub use self::staticobject::*;
-pub use self::unit::Unit;
+pub use self::unit::*;
 pub use self::weapon::Weapon;
 pub use dcsjsonrpc_common::*;
 use std::cell::RefCell;
