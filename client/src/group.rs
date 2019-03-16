@@ -291,6 +291,16 @@ pub enum Task {
         auto: bool,
         params: LandParams,
     },
+    AWACS {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+    },
+    Tanker {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -354,23 +364,18 @@ pub struct WrappedActionParams {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "id")]
+#[serde(tag = "id", content = "params")]
 pub enum Action {
-    Script { params: ScriptParams },
-    EPLRS { params: EplrsParams },
-    Option { params: OptionParams },
+    Script(ScriptParams),
+    EPLRS(EplrsParams),
+    Option(OptionParams),
+    SetInvisible(SetInvisibleParams),
+    ActivateBeacon(ActivateBeaconParams),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScriptParams {
     pub command: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OptionParams {
-    pub name: u64,
-    pub value: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -382,8 +387,44 @@ pub struct EplrsParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OptionParams {
+    pub name: u64,
+    pub value: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetInvisibleParams {
+    value: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ModeChannel {
+    X,
+    Y,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivateBeaconParams {
+    #[serde(rename = "AA")]
+    pub aa: bool,
+    pub bearing: bool,
+    pub callsign: String,
+    pub channel: u16,
+    pub frequency: u64,
+    pub mode_channel: ModeChannel,
+    pub system: u32,
+    #[serde(rename = "type")]
+    pub kind: u32,
+    pub unit_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OrbitParams {
     altitude: f64,
+    #[serde(default)]
     altitude_edited: bool,
     pattern: OrbitKind,
     speed: f64,
@@ -524,30 +565,23 @@ impl Default for WaypointAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaskKind {
-    #[serde(rename = "Nothing")]
     Nothing,
-    #[serde(rename = "AFAC")]
     AFAC,
     #[serde(rename = "Antiship Strike")]
     AntiShipStrike,
-    #[serde(rename = "AWACS")]
     AWACS,
-    #[serde(rename = "CAP")]
     CAP,
-    #[serde(rename = "CAS")]
     CAS,
-    #[serde(rename = "Escort")]
     Escort,
     #[serde(rename = "Fighter Sweep")]
     FighterSweep,
     #[serde(rename = "Ground Attack")]
     GroundAttack,
-    #[serde(rename = "Intercept")]
     Intercept,
     #[serde(rename = "Ground Nothing")]
     GroundNothing,
-    #[serde(rename = "Transport")]
     Transport,
+    Refueling
 }
 
 impl PartialEq for Group {

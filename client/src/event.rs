@@ -49,7 +49,7 @@ where
         /// The unit that took off.
         initiator: Unit,
         /// The airbase, farp or ship the unit took off from.
-        place: Airbase,
+        place: Option<Airbase>,
     },
 
     /// Occurs when an aircraft lands at an airbase, farp or ship.
@@ -303,7 +303,7 @@ pub(crate) enum RawEvent {
     Takeoff {
         time: f64,
         initiator: String,
-        place: String,
+        place: Option<String>,
     },
 
     Land {
@@ -490,7 +490,7 @@ impl RawEvent {
             } => Event::Takeoff {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
-                place: Airbase::new(client.clone(), place),
+                place: place.map(|place| Airbase::new(client.clone(), place)),
             },
             RawEvent::Land {
                 time,
@@ -651,7 +651,7 @@ where
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] {} took off from {}", time, initiator, place),
+            } => write!(f, "[{}] {} took off from {}", time, initiator, place.as_ref().map(|a| a.name()).unwrap_or("ground")),
             Land {
                 time,
                 initiator,
