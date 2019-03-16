@@ -826,8 +826,8 @@ end
 function onEvent(event)
     --env.info("[JSONRPC] Event: "..inspect(event))
 
-    if (event.id ~= world.event.S_EVENT_MISSION_START and event.id ~= world.event.S_EVENT_MISSION_END) and event.initiator == nil then
-        env.info("[JSONRPC] Event: ignoring event with missing initiator")
+    if (event.id ~= world.event.S_EVENT_MISSION_START and event.id ~= world.event.S_EVENT_MISSION_END and event.id ~= world.event.S_EVENT_TOOK_CONTROL) and event.initiator == nil then
+        env.info("[JSONRPC] Event: ignoring event (id: "..tostring(event.id)..") with missing initiator")
 
     elseif event.id == world.event.S_EVENT_SHOT then
         jsonrpc.broadcast("Shot", json:encode({

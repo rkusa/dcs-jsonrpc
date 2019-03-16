@@ -581,7 +581,7 @@ pub enum TaskKind {
     #[serde(rename = "Ground Nothing")]
     GroundNothing,
     Transport,
-    Refueling
+    Refueling,
 }
 
 impl PartialEq for Group {

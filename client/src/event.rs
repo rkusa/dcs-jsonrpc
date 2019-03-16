@@ -651,7 +651,13 @@ where
                 time,
                 initiator,
                 place,
-            } => write!(f, "[{}] {} took off from {}", time, initiator, place.as_ref().map(|a| a.name()).unwrap_or("ground")),
+            } => write!(
+                f,
+                "[{}] {} took off from {}",
+                time,
+                initiator,
+                place.as_ref().map(|a| a.name()).unwrap_or("ground")
+            ),
             Land {
                 time,
                 initiator,
