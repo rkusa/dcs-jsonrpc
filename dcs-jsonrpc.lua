@@ -222,6 +222,13 @@ function method_groupData(params)
                             groupData.category = Group.getByName(groupData.name):getCategory()
                             for _, unit in pairs(groupData.units) do
                                 unit.name = dict_value(unit.name)
+                                if unit.callsign ~= nil then
+                                    unit.callsignCompat = {
+                                        unit.callsign[1],
+                                        unit.callsign[2],
+                                        unit.callsign[3],
+                                    }
+                                end
                             end
                             return success(groupData)
                         end
@@ -270,9 +277,20 @@ function method_groupCategory(params)
 end
 
 function method_addGroup(params)
+    for _, unit in pairs(params.data.units) do
+        if unit.callsignCompat ~= nil then
+            unit.callsign = {
+                unit.callsignCompat[1],
+                unit.callsignCompat[2],
+                unit.callsignCompat[3],
+            }
+            unit.callsignCompat = nil
+        end
+    end
+
     -- TODO: return error on missing params
     coalition.addGroup(params.country, params.category, params.data)
-    -- Note: the group does not exist immediately, why we cannot do something like
+    -- Note: the group does not exist immediately, which is why we cannot do something like
     -- group:getName() here
     return success("ok")
 end

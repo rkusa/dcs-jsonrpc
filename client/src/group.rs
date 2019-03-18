@@ -168,8 +168,8 @@ pub enum GroupData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AircraftGroupData {
-    //    #[serde(rename = "groupId", skip_serializing)]
-    //    pub id: u64,
+    // #[serde(rename = "groupId")]
+    // pub id: Option<u64>,
     pub communication: bool,
     pub frequency: f64,
     pub hidden: bool,
@@ -183,14 +183,18 @@ pub struct AircraftGroupData {
     pub units: Vec<UnitData>,
     pub x: f64,
     pub y: f64,
-    //    #[serde(rename = "radioSet")]
-    //    pub radio_set: bool,
+    #[serde(default, rename = "radioSet")]
+    pub radio_set: bool,
+    #[serde(default, rename = "taskSelected")]
+    pub task_selected: bool,
+    #[serde(default, rename = "lateActivation")]
+    pub late_activation: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroundGroupData {
-    //    #[serde(rename = "groupId", skip_serializing)]
-    //    pub id: u64,
+    // #[serde(rename = "groupId")]
+    // pub id: Option<u64>,
     pub hidden: bool,
     pub name: String,
     pub route: RouteData,
@@ -209,6 +213,8 @@ pub struct GroundGroupData {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RouteData {
     pub points: Vec<PointData>,
+    #[serde(default, rename = "routeRelativeTOT")]
+    pub route_relative_tot: bool,
 }
 
 // known unimplemented properties: airdromeId, helipadId, formation_template
@@ -380,6 +386,7 @@ pub enum Action {
     Option(OptionParams),
     SetInvisible(SetInvisibleParams),
     ActivateBeacon(ActivateBeaconParams),
+    SetFrequency(SetFrequencyParams),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -430,6 +437,13 @@ pub struct ActivateBeaconParams {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetFrequencyParams {
+    pub frequency: u64,
+    pub modulation: u64,
+    pub power: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrbitParams {
     altitude: f64,
@@ -474,12 +488,11 @@ pub enum TargetType {
     Air,
 }
 
-// known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks, livery_id,
-// onboard_num, psi
+// known unimplemented properties: AddPropAircraft, Radio, hardpoint_racks
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UnitData {
-    //    #[serde(rename = "unitId")]
-    //    pub id: u64,
+    // #[serde(rename = "unitId")]
+    // pub id: Option<u64>,
     #[serde(rename = "type")]
     pub kind: String, // TODO: enum?
     pub name: String,
@@ -488,7 +501,8 @@ pub struct UnitData {
     #[serde(default)]
     pub alt_type: AltitudeType,
     // statics do not have a callsign
-    pub callsign: Option<Value>, // TODO: propper struct
+    #[serde(rename = "callsignCompat", skip_serializing_if = "Option::is_none")]
+    pub callsign: Option<Vec<u16>>,
     #[serde(default)]
     pub heading: f64,
     pub payload: Option<Value>, // TODO
@@ -497,6 +511,12 @@ pub struct UnitData {
     pub speed: f64,
     pub x: f64,
     pub y: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub livery_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub onboard_num: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub psi: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
