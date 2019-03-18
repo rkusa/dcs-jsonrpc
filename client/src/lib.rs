@@ -301,19 +301,19 @@ where
         self.client.request::<(), Vec<String>>("getZones", None)
     }
 
-    pub fn get_user_flag(&self, flag: u16) -> Result<u16, Error> {
+    pub fn get_user_flag(&self, flag: &str) -> Result<u16, Error> {
         #[derive(Serialize)]
-        struct Params {
-            flag: u16,
+        struct Params<'a> {
+            flag: &'a str,
         }
 
         self.client.request("getUserFlag", Some(Params { flag }))
     }
 
-    pub fn set_user_flag(&self, flag: u16, value: u16) -> Result<(), Error> {
+    pub fn set_user_flag(&self, flag: &str, value: u16) -> Result<(), Error> {
         #[derive(Serialize)]
-        struct Params {
-            flag: u16,
+        struct Params<'a> {
+            flag: &'a str,
             value: u16,
         }
 
