@@ -173,7 +173,12 @@ function method_groupExists(params)
     if group == nil then
         return success(false)
     else
-        return success(group:isExist())
+        if group:getSize() == 0 then
+            group:destroy()
+            return success(false)
+        else
+            return success(group:isExist())
+        end
     end
 end
 
