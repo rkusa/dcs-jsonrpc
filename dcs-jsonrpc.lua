@@ -326,6 +326,16 @@ function method_groupDestory(params)
     return success(nil)
 end
 
+function method_groupSize(params)
+    -- TODO: return error on missing params
+    local group = groupByIdentifier(params)
+    if group == nil then
+        return error("Group does not exist")
+    end
+
+     success(group:getSize())
+end
+
 --
 -- RPC Unit methods
 --

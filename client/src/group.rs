@@ -148,6 +148,10 @@ impl Group {
     pub fn destroy(self) -> Result<(), Error> {
         self.client.notification("groupDestory", Some(&self))
     }
+
+    pub fn size(&self) -> Result<usize, Error> {
+        self.client.request("groupSize", Some(&self))
+    }
 }
 
 pub struct GroupIterator {
