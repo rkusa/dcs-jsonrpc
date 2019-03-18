@@ -301,6 +301,11 @@ pub enum Task {
         number: usize,
         auto: bool,
     },
+    EWR {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
