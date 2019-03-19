@@ -859,7 +859,7 @@ end
 function onEvent(event)
     --env.info("[JSONRPC] Event: "..inspect(event))
 
-    if (event.id ~= world.event.S_EVENT_MISSION_START and event.id ~= world.event.S_EVENT_MISSION_END and event.id ~= world.event.S_EVENT_TOOK_CONTROL) and event.initiator == nil then
+    if (event.id ~= world.event.S_EVENT_MISSION_START and event.id ~= world.event.S_EVENT_MISSION_END and event.id ~= world.event.S_EVENT_TOOK_CONTROL and event.id ~= world.event.S_EVENT_MARK_ADDED and event.id ~= world.event.S_EVENT_MARK_CHANGE and event.id ~= S_EVENT_MARK_REMOVED) and event.initiator == nil then
         env.info("[JSONRPC] Event: ignoring event (id: "..tostring(event.id)..") with missing initiator")
 
     elseif event.id == world.event.S_EVENT_SHOT then
@@ -876,12 +876,18 @@ function onEvent(event)
                 name = event.target:getName() or "",
                 category = event.target:getCategory(),
             }
+            local weapon = nil
+            if event.weapon ~= nil then
+                weapon = { id = event.weapon:getName() }
+            end
             jsonrpc.broadcast("Hit", json:encode({
                 time = event.time,
                 initiator = identifier(event.initiator),
-                weapon = { id = event.weapon:getName() },
+                weapon = weapon,
                 target = target,
             }))
+        else
+            env.error("[JSONRPC] Received HIT event without target")
         end
 
     elseif event.id == world.event.S_EVENT_TAKEOFF then

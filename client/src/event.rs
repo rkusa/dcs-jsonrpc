@@ -37,7 +37,7 @@ where
         /// The unit that fired the weapon.
         initiator: Unit,
         /// The weapon that the target has been hit with.
-        weapon: Weapon,
+        weapon: Option<Weapon>,
         /// The object that has been hit.
         target: Object,
     },
@@ -296,7 +296,7 @@ pub(crate) enum RawEvent {
     Hit {
         time: f64,
         initiator: String,
-        weapon: ID,
+        weapon: Option<ID>,
         target: RawTarget,
     },
 
@@ -459,7 +459,7 @@ impl RawEvent {
             } => Event::Hit {
                 time,
                 initiator: Unit::new(client.clone(), initiator),
-                weapon: Weapon::new(client.clone(), weapon.id),
+                weapon: weapon.map(|w| Weapon::new(client.clone(), w.id)),
                 target: {
                     match target.category {
                         ObjectCategory::Unit => {
@@ -646,7 +646,14 @@ where
                 initiator,
                 weapon,
                 target,
-            } => write!(f, "[{}] {} hit {} with {}", time, initiator, target, weapon),
+            } => write!(
+                f,
+                "[{}] {} hit {} with {}",
+                time,
+                initiator,
+                target,
+                weapon.as_ref().map(|a| a.id()).unwrap_or(0)
+            ),
             Takeoff {
                 time,
                 initiator,

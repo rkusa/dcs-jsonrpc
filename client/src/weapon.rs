@@ -12,6 +12,10 @@ impl Weapon {
     pub(crate) fn new(client: Client, id: usize) -> Self {
         Weapon { client, id }
     }
+
+    pub fn id(&self) -> usize {
+        self.id
+    }
 }
 
 impl fmt::Debug for Weapon {
