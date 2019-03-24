@@ -1,6 +1,8 @@
 #![warn(rust_2018_idioms)]
 
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate serde_derive;
 
 #[macro_use]
@@ -361,7 +363,7 @@ where
                 Ok(ev) => Some(ev),
                 Err(err) => {
                     // TODO: remove eprintln ?
-                    eprintln!("Error deserializing command: {}", err);
+                    error!("Error deserializing command: {}", err);
                     None
                 }
             })

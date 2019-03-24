@@ -222,7 +222,7 @@ function method_groupData(params)
                             groupData.category = Group.getByName(groupData.name):getCategory()
                             for _, unit in pairs(groupData.units) do
                                 unit.name = dict_value(unit.name)
-                                if unit.callsign ~= nil then
+                                if unit.callsign ~= nil and type(unit.callsign) == 'table' then
                                     unit.callsignCompat = {
                                         unit.callsign[1],
                                         unit.callsign[2],
@@ -811,11 +811,14 @@ function handleRequest(method, params)
 
     if type(fn) == "function" then
         local ok, result = pcall(fn, params)
-        if not ok then
+        if ok then
+            return result
+        else
             env.error("[JSONRPC] error executing "..method.." with params: "..tostring(params)..": "..tostring(result))
+            return {
+                error = tostring(result)
+            }
         end
-
-        return result
     else
         return {
             error = "unsupported method "..method

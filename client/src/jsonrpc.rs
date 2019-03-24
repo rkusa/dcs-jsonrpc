@@ -4,19 +4,27 @@ use std::io::BufReader;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use crate::error::Error;
 use crate::event::RawEvent;
 use dcsjsonrpc_common::{Notification, Request, Response, Version, ID};
 use serde_json::Value;
 
+const TIMEOUT: Duration = Duration::from_secs(60);
+
 #[derive(Clone)]
 pub struct Client {
     tx: mpsc::Sender<Vec<u8>>,
     // TODO: remove pending responses after a certain amount of time
-    pending: Arc<Mutex<HashMap<ID, mpsc::Sender<Response>>>>,
+    pending: Arc<Mutex<HashMap<ID, Pending>>>,
     next_id: Arc<Mutex<i64>>,
     subscriptions: Arc<Mutex<Vec<mpsc::Sender<RawEvent>>>>,
+}
+
+struct Pending {
+    tx: mpsc::Sender<Response>,
+    created_at: Instant,
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,12 +51,13 @@ impl Client {
             subscriptions: subs.clone(),
         };
 
+        let pending2 = pending.clone();
         thread::spawn(move || {
             for line in rd.lines() {
                 let line = match line {
                     Ok(line) => line,
                     Err(err) => {
-                        eprintln!("Error reading from TCP stream: {}", err);
+                        error!("Error reading from TCP stream: {}", err);
                         break;
                     }
                 };
@@ -56,7 +65,7 @@ impl Client {
                 let res: Incoming = match serde_json::from_str(&line) {
                     Ok(res) => res,
                     Err(err) => {
-                        eprintln!(
+                        error!(
                             "Error deserializing response: {}\nRaw response: {}",
                             err, line
                         );
@@ -70,13 +79,13 @@ impl Client {
                             Response::Success { ref id, .. } => id,
                             Response::Error { ref id, .. } => id,
                         };
-                        let mut pending = pending.lock().unwrap();
-                        if let Some(tx) = pending.remove(&id) {
+                        let mut pending = pending2.lock().unwrap();
+                        if let Some(Pending { tx, .. }) = pending.remove(&id) {
                             if let Err(err) = tx.send(res) {
-                                eprintln!("Error routing response: {}", err);
+                                error!("Error routing response: {}", err);
                             }
                         } else {
-                            eprintln!("No pending response for id {} found", id);
+                            error!("No pending response for id {} found", id);
                         }
                     }
                     Incoming::Notification(Notification { method, params, .. }) => {
@@ -88,7 +97,7 @@ impl Client {
                             let event: RawEvent = match serde_json::from_value(params) {
                                 Ok(ev) => ev,
                                 Err(err) => {
-                                    eprintln!("Error deserializing event: {}", err);
+                                    error!("Error deserializing event: {}", err);
                                     continue;
                                 }
                             };
@@ -111,8 +120,22 @@ impl Client {
 
             loop {
                 if let Err(err) = forwad() {
-                    eprintln!("Error sending request: {}", err);
+                    error!("Error sending request: {}", err);
                     break;
+                }
+            }
+        });
+
+        // timeout long running requests
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(1));
+
+            let mut pending = pending.lock().unwrap();
+            // pending.retain(|_, p| p.created_at.elapsed() < TIMEOUT);
+            for (id, p) in pending.iter_mut() {
+                if p.created_at.elapsed() > TIMEOUT {
+                    warn!("Response for {} is still pending ...", id);
+                    p.created_at = Instant::now();
                 }
             }
         });
@@ -138,7 +161,13 @@ impl Client {
         let (tx, rx) = mpsc::channel();
         {
             let mut pending = self.pending.lock().unwrap();
-            pending.insert(req.id.clone(), tx);
+            pending.insert(
+                req.id.clone(),
+                Pending {
+                    tx,
+                    created_at: Instant::now(),
+                },
+            );
         }
 
         let data = serde_json::to_vec(&req)?;
