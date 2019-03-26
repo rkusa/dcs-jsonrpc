@@ -316,6 +316,41 @@ pub enum Task {
         number: usize,
         auto: bool,
     },
+    #[serde(rename = "FAC_AttackGroup")]
+    FACAttackGroup {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: FACAttackGroupParams,
+    },
+    EmbarkToTransport {
+        enabled: bool,
+        number: usize,
+        auto: bool,
+        params: EmbarkToTransportParams,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbarkToTransportParams {
+    pub selected_type: String, // TODO: enum?
+    pub x: f64,
+    pub y: f64,
+    pub zone_radius: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FACAttackGroupParams {
+    pub callname: u32,
+    pub datalink: bool,
+    pub designation: String, // TODO: enum?
+    pub frequency: u64,
+    pub group_id: u64,
+    pub modulation: u64,
+    pub number: u64,
+    pub weapon_type: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
