@@ -468,7 +468,7 @@ pub struct ActivateBeaconParams {
     pub system: u32,
     #[serde(rename = "type")]
     pub kind: u32,
-    pub unit_id: u64,
+    pub unit_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
