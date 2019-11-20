@@ -26,7 +26,7 @@ Contributions are welcome, especially adding more RPC methods (they are added in
 
 ## Installation
 
-1. Build module with Rust nightly by running: `cargo build`
+1. Build module with Rust (stable) by running: `cargo build`
 2. Edit `DCS World\Scripts\MissionScripting.lua` and uncomment line 18 to 20; the bottom of the file should look like:
 
     ```lua

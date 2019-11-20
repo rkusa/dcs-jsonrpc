@@ -1,5 +1,6 @@
-use crate::error::Error;
+use crate::error::argument_type_error;
 use crate::server::Server;
+use anyhow::Context;
 use lua51 as ffi;
 use lua51::lua_pop;
 use serde_json::Value;
@@ -8,7 +9,7 @@ use std::ffi::{CStr, CString};
 static mut INITIALIZED: bool = false;
 static mut SERVER: Option<Server> = None;
 
-pub fn init(l: *mut ffi::lua_State) -> Result<(), Error> {
+pub fn init(l: *mut ffi::lua_State) -> Result<(), anyhow::Error> {
     unsafe {
         if INITIALIZED {
             return Ok(());
@@ -80,7 +81,7 @@ pub fn init(l: *mut ffi::lua_State) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn start(l: *mut ffi::lua_State) -> Result<(), Error> {
+pub fn start(l: *mut ffi::lua_State) -> Result<(), anyhow::Error> {
     if unsafe { SERVER.is_some() } {
         return Ok(());
     }
@@ -105,17 +106,14 @@ pub fn stop() {
     }
 }
 
-pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
+pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, anyhow::Error> {
     // expect 1 argument, ignore other ones
     ffi::lua_settop(l, 1);
 
     // read callback argument
     if !ffi::lua_isfunction(l, -1) {
         ffi::lua_settop(l, 0);
-        return Err(Error::ArgumentType(
-            "callback".to_string(),
-            "function".to_string(),
-        ));
+        return Err(argument_type_error("callback", "function"));
     }
 
     if let Some(server) = &SERVER {
@@ -134,10 +132,7 @@ pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
 
             if !ffi::lua_istable(l, -1) {
                 ffi::lua_settop(l, 0);
-                return Err(Error::ArgumentType(
-                    "result".to_string(),
-                    "table".to_string(),
-                ));
+                return Err(argument_type_error("result", "table"));
             }
 
             // check whether we've received an error
@@ -161,8 +156,8 @@ pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
                 let res = CStr::from_ptr(ffi::lua_tostring(l, -1))
                     .to_str()?
                     .to_string();
-                let res: Value = serde_json::from_str(&res)
-                    .map_err(|err| Error::SerializeResult(err, res.to_string()))?;
+                let res: Value =
+                    serde_json::from_str(&res).with_context(|| format!("Deserialize: {}", res))?;
                 next.success(res);
             }
 
@@ -175,7 +170,7 @@ pub unsafe fn try_next(l: *mut ffi::lua_State) -> Result<bool, Error> {
     Ok(false)
 }
 
-pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), Error> {
+pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), anyhow::Error> {
     let (payload, channel) = unsafe {
         // expect 2 arguments, ignore other ones
         ffi::lua_settop(l, 2);
@@ -183,10 +178,7 @@ pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), Error> {
         // read payload argument
         if ffi::lua_isstring(l, -1) == 0 {
             ffi::lua_settop(l, 0);
-            return Err(Error::ArgumentType(
-                "channel".to_string(),
-                "string".to_string(),
-            ));
+            return Err(argument_type_error("channel", "string"));
         }
         let payload = CStr::from_ptr(ffi::lua_tostring(l, -1))
             .to_str()?
@@ -195,10 +187,7 @@ pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), Error> {
         // read channel argument
         if ffi::lua_isstring(l, -2) == 0 {
             ffi::lua_settop(l, 0);
-            return Err(Error::ArgumentType(
-                "payload".to_string(),
-                "string".to_string(),
-            ));
+            return Err(argument_type_error("payload", "string"));
         }
         let channel = CStr::from_ptr(ffi::lua_tostring(l, -2))
             .to_str()?
@@ -209,7 +198,7 @@ pub fn broadcast(l: *mut ffi::lua_State) -> Result<(), Error> {
     };
 
     let payload: Option<Value> =
-        serde_json::from_str(&payload).map_err(|err| Error::SerializeBroadcast(err, payload))?;
+        serde_json::from_str(&payload).with_context(|| format!("Deserializing: {}", payload))?;
 
     if let Some(server) = unsafe { &SERVER } {
         server.broadcast(&channel, payload);

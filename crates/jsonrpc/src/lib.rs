@@ -1,8 +1,3 @@
-#![feature(try_trait, await_macro, async_await, futures_api)]
-#![warn(rust_2018_idioms)]
-
-#[macro_use]
-extern crate tokio;
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -11,6 +6,8 @@ extern crate const_cstr;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate anyhow;
 
 mod error;
 mod module;

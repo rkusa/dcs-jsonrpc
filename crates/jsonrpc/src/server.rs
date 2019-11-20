@@ -1,15 +1,15 @@
 use std::collections::{HashMap, VecDeque};
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
-use std::{mem, thread};
 
-use crate::error::Error;
 use dcsjsonrpc_common::{Notification, Request, Response, RpcError, Version};
-use futures::sync::mpsc::{channel, Sender};
-use futures::sync::oneshot;
+use futures::channel::mpsc::{channel, Sender};
+use futures::StreamExt;
 use serde_json::Value;
 use tokio::codec::{Framed, LinesCodec};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::prelude::*;
+use tokio::runtime::Runtime;
 
 type Queue = Arc<Mutex<VecDeque<PendingRequest>>>;
 type Subscriptions = Arc<Mutex<HashMap<String, Vec<Sender<Outgoing>>>>>;
@@ -17,74 +17,34 @@ type Subscriptions = Arc<Mutex<HashMap<String, Vec<Sender<Outgoing>>>>>;
 pub struct Server {
     queue: Queue,
     subscriptions: Subscriptions,
-    shutdown: oneshot::Sender<()>,
+    runtime: Runtime,
 }
 
 impl Server {
-    pub fn start() -> Result<Self, Error> {
-        let (tx, rx) = oneshot::channel::<()>();
+    pub fn start() -> Result<Self, anyhow::Error> {
         let server = Server {
             queue: Arc::new(Mutex::new(VecDeque::new())),
             subscriptions: Arc::new(Mutex::new(HashMap::new())),
-            shutdown: tx,
+            runtime: Runtime::new()?,
         };
 
         let addr = "127.0.0.1:7777".parse().unwrap();
-        let listener = TcpListener::bind(&addr)?;
 
         let queue = server.queue.clone();
         let subs = server.subscriptions.clone();
-        thread::spawn(move || {
-            tokio::run_async(
-                async move {
-                    let mut incoming = Shutdownable::new(listener.incoming(), rx);
-                    let clients: Arc<Mutex<HashMap<usize, oneshot::Sender<()>>>> =
-                        Arc::new(Mutex::new(HashMap::new()));
-                    let mut next_ix = 1;
-
-                    while let Some(stream) = await!(incoming.next()) {
-                        let stream = match stream {
-                            Ok(stream) => stream,
-                            Err(err) => {
-                                error!("Error establishing connection: {}", err);
-                                continue;
-                            }
-                        };
-
-                        // client shutdown channel
-                        let (tx, rx) = oneshot::channel();
-                        let ix = next_ix;
-                        next_ix += 1;
-                        clients.lock().unwrap().insert(ix, tx);
-
-                        let clients = clients.clone();
-                        let queue = queue.clone();
-                        let subs = subs.clone();
-                        tokio::spawn_async(
-                            async move {
-                                await!(handle_client(stream, queue, subs, rx));
-
-                                clients.lock().unwrap().remove(&ix);
-                            },
-                        );
-                    }
-
-                    let mut clients = clients.lock().unwrap();
-                    let clients = mem::replace(&mut *clients, HashMap::new());
-                    for (_, client) in clients {
-                        let _ = client.send(()).unwrap();
-                    }
-
-                    info!("TCP server shut down");
-                },
-            );
-        });
+        server.runtime.spawn(start(addr, queue, subs).map(|result| {
+            if let Err(err) = result {
+                error!("{}", err);
+            }
+            ()
+        }));
 
         Ok(server)
     }
 
     pub fn stop(self) {
-        self.shutdown.send(()).unwrap();
+        self.runtime.shutdown_now();
+        info!("TCP server shut down");
     }
 
     pub fn try_next(&self) -> Option<PendingRequest> {
@@ -120,44 +80,48 @@ impl Server {
     }
 }
 
-async fn handle_client(
-    stream: TcpStream,
-    queue: Queue,
-    subs: Subscriptions,
-    shutdown: oneshot::Receiver<()>,
-) {
+async fn start(addr: SocketAddr, queue: Queue, subs: Subscriptions) -> Result<(), anyhow::Error> {
+    let mut listener = TcpListener::bind(&addr).await?;
+
+    loop {
+        let stream = match listener.accept().await {
+            Ok((stream, _)) => stream,
+            Err(err) => {
+                error!("Error establishing connection: {}", err);
+                continue;
+            }
+        };
+
+        tokio::spawn(handle_client(stream, queue.clone(), subs.clone()));
+    }
+}
+
+async fn handle_client(stream: TcpStream, queue: Queue, subs: Subscriptions) {
     debug!("Client connected ...");
 
     let framed = Framed::new(stream, LinesCodec::new());
-    let (mut sink, stream) = framed.split();
+    let (mut sink, mut stream) = framed.split();
 
     let (mut tx, mut rx) = channel::<Outgoing>(128);
-    tokio::spawn_async(
-        async move {
-            while let Some(res) = await!(rx.next()) {
-                // receive stream has error type (), ie, it will not throw an error ever,
-                // thus unwrap is fine
-                let res = res.unwrap();
-
-                debug!("Responding with: {:?}", res);
-                match serde_json::to_string(&res) {
-                    Ok(res) => {
-                        if let Err(err) = await!(sink.send_async(res)) {
-                            error!("Error sending message: {}", err);
-                        }
-                    }
-                    Err(err) => {
-                        error!("Error serializing outgoing message: {}", err);
+    tokio::spawn(async move {
+        while let Some(res) = rx.next().await {
+            debug!("Responding with: {:?}", res);
+            match serde_json::to_string(&res) {
+                Ok(res) => {
+                    if let Err(err) = sink.send(res).await {
+                        error!("Error sending message: {}", err);
                     }
                 }
+                Err(err) => {
+                    error!("Error serializing outgoing message: {}", err);
+                }
             }
+        }
 
-            debug!("Client sending loop closed");
-        },
-    );
+        debug!("Client sending loop closed");
+    });
 
-    let mut stream = Shutdownable::new(stream, shutdown);
-    while let Some(line) = await!(stream.next()) {
+    while let Some(line) = stream.next().await {
         let line = match line {
             Ok(line) => line,
             Err(err) => {
@@ -254,6 +218,7 @@ pub enum Incoming {
 }
 
 impl Incoming {
+    #[allow(unused)]
     pub fn jsonrpc(&self) -> Version {
         match *self {
             Incoming::Request(ref req) => req.jsonrpc,
@@ -307,45 +272,5 @@ fn error_response(tx: &mut Sender<Outgoing>, req: &mut Request, error: String) {
         id: req.id.clone(),
     })) {
         error!("Error sending error response: {}", err);
-    }
-}
-
-#[must_use = "streams do nothing unless polled"]
-#[derive(Debug)]
-pub struct Shutdownable<S>
-where
-    S: Stream,
-{
-    inner: Box<S>,
-    shutdown: oneshot::Receiver<()>,
-}
-
-impl<S> Shutdownable<S>
-where
-    S: Stream,
-{
-    pub(crate) fn new(listener: S, shutdown: oneshot::Receiver<()>) -> Self {
-        Shutdownable {
-            inner: Box::new(listener),
-            shutdown,
-        }
-    }
-}
-
-impl<S> Stream for Shutdownable<S>
-where
-    S: Stream,
-{
-    type Item = S::Item;
-    type Error = S::Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        use futures::Async;
-
-        if self.shutdown.poll() != Ok(Async::NotReady) {
-            return Ok(Async::Ready(None));
-        }
-
-        self.inner.poll()
     }
 }
