@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "client",
-    "common",
-    "example",
-    "jsonrpc",
-    "lua51",
-    "repl",
+    "crates/client",
+    "crates/common",
+    "crates/example",
+    "crates/jsonrpc",
+    "crates/lua51",
+    "crates/repl",
 ]

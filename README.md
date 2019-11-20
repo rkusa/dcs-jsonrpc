@@ -16,19 +16,19 @@ A JSON-RPC server that runs inside the DCS World mission environment and exposes
 
 Contributions are welcome, especially adding more RPC methods (they are added in [dcs-jsonrpc.lua](./dcs-jsonrpc.lua)).
 
-## Sub-Projects
+## Crates
 
-- [**client**](./client) - this is a Rust client that wrappes the JSON-RPC calls into a easy to use API
-- [**example**](./example) - this is a simple example of how to use the Rust-based client
-- [**common**](./common) - this crate includes some structs that are shared between the different sub-projects
-- [**jsonrpc**](./jsonrpc) - this is a Lua module that runs the JSON-RPC server inside the DCS World mission environment  
-- [**repl**](./repl) - this is a simple REPL that can be used to execute Lua in a running DCS Word mission (meant for debugging)
+- [**client**](./crates/client) - this is a Rust client that wrappes the JSON-RPC calls into a easy to use API
+- [**example**](./crates/example) - this is a simple example of how to use the Rust-based client
+- [**common**](./crates/common) - this crate includes some structs that are shared between the different sub-projects
+- [**jsonrpc**](./crates/jsonrpc) - this is a Lua module that runs the JSON-RPC server inside the DCS World mission environment
+- [**repl**](./crates/repl) - this is a simple REPL that can be used to execute Lua in a running DCS Word mission (meant for debugging)
 
 ## Installation
 
 1. Build module with Rust nightly by running: `cargo build`
 2. Edit `DCS World\Scripts\MissionScripting.lua` and uncomment line 18 to 20; the bottom of the file should look like:
-    
+
     ```lua
     do
         sanitizeModule('os')
@@ -45,9 +45,9 @@ Contributions are welcome, especially adding more RPC methods (they are added in
     package.cpath = package.cpath..lfs.writedir()..[[Scripts\dcs-jsonrpc\?.dll;]]
     dofile(lfs.writedir()..[[Scripts\dcs-jsonrpc\dcs-jsonrpc.lua]])
     ```
-    
+
     (don't forget to adjust `M:/Development/dcs-jsonrpc` to the path where you have checked out this repository)
-    
+
     (`New-Item -ItemType SymbolicLink -Name dcs-jsonrpc.lua -Value M:/Development/dcs-jsonrpc/dcs-jsonrpc.lua`)
 
 4. That's it
