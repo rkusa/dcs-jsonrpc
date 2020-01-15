@@ -1,15 +1,15 @@
 use std::collections::{HashMap, VecDeque};
+use std::mem;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use dcsjsonrpc_common::{Notification, Request, Response, RpcError, Version};
 use futures::channel::mpsc::{channel, Sender};
-use futures::StreamExt;
+use futures::{FutureExt, SinkExt, StreamExt};
 use serde_json::Value;
-use tokio::codec::{Framed, LinesCodec};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::prelude::*;
 use tokio::runtime::Runtime;
+use tokio_util::codec::{Framed, LinesCodec};
 
 type Queue = Arc<Mutex<VecDeque<PendingRequest>>>;
 type Subscriptions = Arc<Mutex<HashMap<String, Vec<Sender<Outgoing>>>>>;
@@ -43,7 +43,7 @@ impl Server {
     }
 
     pub fn stop(self) {
-        self.runtime.shutdown_now();
+        mem::drop(self.runtime);
         info!("TCP server shut down");
     }
 

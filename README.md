@@ -2,7 +2,7 @@
 
 A JSON-RPC server that runs inside the DCS World mission environment and exposes mission scripting through an [JSON-API 2.0](https://www.jsonrpc.org/specification) over non-blocking TCP.
 
-[Documentation](./docs)
+[Documentation](./jsonrpc/README.md)
 
 ---
 
