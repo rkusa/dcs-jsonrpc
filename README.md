@@ -2,7 +2,7 @@
 
 A JSON-RPC server that runs inside the DCS World mission environment and exposes mission scripting through an [JSON-API 2.0](https://www.jsonrpc.org/specification) over non-blocking TCP.
 
-[Documentation](./jsonrpc/README.md)
+[Documentation](./crates/jsonrpc/README.md)
 
 ---
 
@@ -14,7 +14,7 @@ A JSON-RPC server that runs inside the DCS World mission environment and exposes
 - Resilient TCP connection (e.g. no automatic reconnects, yet)
 - Add more RPC methods
 
-Contributions are welcome, especially adding more RPC methods (they are added in [dcs-jsonrpc.lua](./dcs-jsonrpc.lua)).
+Contributions are welcome, especially adding more RPC methods (they are added in [dcs-jsonrpc.lua](./mod/Scripts/dcs-jsonrpc/dcs-jsonrpc.lua)).
 
 ## Crates
 
@@ -26,8 +26,7 @@ Contributions are welcome, especially adding more RPC methods (they are added in
 
 ## Installation
 
-1. Build module with Rust (stable) by running: `cargo build`
-2. Edit `DCS World\Scripts\MissionScripting.lua` and uncomment line 18 to 20; the bottom of the file should look like:
+1. Edit `DCS World\Scripts\MissionScripting.lua` and uncomment line 18 to 20; the bottom of the file should look like:
 
     ```lua
     do
@@ -35,22 +34,37 @@ Contributions are welcome, especially adding more RPC methods (they are added in
         sanitizeModule('io')
         --sanitizeModule('lfs')
         --require = nil
-        --loadlib = nil
+        loadlib = nil
     end
     ```
 
-3. Create a DCS mission, create a trigger type `Mission Start` with the Action `Do Script` and the following script:
+2. Copy the contents of [`./mod`](`./mod`) to your `Saved Games\DCS.openbeta` folder (there should be `Saved Games\DCS.openbeta\Scripts\dcs-jsonrpc\dcs-jsonrpc.lua` and `Saved Games\DCS.openbeta\Scripts\dcs-jsonrpc\json.lua`) now.
+
+2. Build module with Rust (stable) by running: `cargo build --release`
+
+3. Copy `target/release/dcsjsonrpc.dll` to `Saved Games\DCS.openbeta\Scripts\dcs-jsonrpc\`
+
+3. Create a DCS mission, add a trigger type `Mission Start` with the Action `Do Script` and insert the following script:
 
     ```lua
     package.cpath = package.cpath..lfs.writedir()..[[Scripts\dcs-jsonrpc\?.dll;]]
     dofile(lfs.writedir()..[[Scripts\dcs-jsonrpc\dcs-jsonrpc.lua]])
     ```
 
-    (don't forget to adjust `M:/Development/dcs-jsonrpc` to the path where you have checked out this repository)
-
-    (`New-Item -ItemType SymbolicLink -Name dcs-jsonrpc.lua -Value M:/Development/dcs-jsonrpc/dcs-jsonrpc.lua`)
-
 4. That's it
+
+To validate that it is working either connect to the socket as shown in the [Example](#example) below, or by running `cargo run -p example`.
+
+## Development Setup
+
+During development it is recommended to link `dcs-jsonrpc.lua` from the repository into your `Saved Games\DCS.openbeta\Scripts\dcs-jsonrpc\` folder:
+
+```
+cd '.\Saved Games\DCS.openbeta\Scripts\dcs-jsonrpc\'
+New-Item -ItemType SymbolicLink -Name dcs-jsonrpc.lua -Value M:/Development/dcs-jsonrpc/mod/Scripts/dcs-jsonrpc/dcs-jsonrpc.lua
+```
+
+(don't forget to adjust `M:/Development/dcs-jsonrpc` to the path where you have checked out this repository)
 
 ## Example
 
