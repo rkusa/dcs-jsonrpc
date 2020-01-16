@@ -157,16 +157,6 @@ function method_groupID(params)
     end
 end
 
-function method_groupName(params)
-    -- TODO: return error on missing params
-    local group = groupByIdentifier(params)
-    if group == nil then
-        return success(nil)
-    else
-        return success(group:getName())
-    end
-end
-
 function method_groupExists(params)
     -- TODO: return error on missing params
     local group = groupByIdentifier(params)
@@ -362,16 +352,6 @@ end
 --
 -- RPC Unit methods
 --
-
-function method_unitName(params)
-    -- TODO: return error on missing params
-    local unit = unitByIdentifier(params)
-    if unit == nil then
-        return success(nil)
-    else
-        return success(unit:getID())
-    end
-end
 
 function method_unitExists(params)
     -- TODO: return error on missing params
@@ -589,8 +569,6 @@ function method_airbasePosition(params)
         return success(airbase:getPoint())
     end
 end
-
-
 
 --
 -- RPC Static methods

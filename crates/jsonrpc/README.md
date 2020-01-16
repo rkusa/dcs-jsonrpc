@@ -2,6 +2,10 @@
 
 ## Methods
 
+#### `health`
+
+Returns `"ok"`.
+
 #### `execute`
 
 Execute a given Lua code.
@@ -27,6 +31,16 @@ Displays the passed string of text for the specified time to all players.
 - *displayTime* (number) - the amount of seconds the message should be displayed
 - *clearView* (boolean) - defines whether or not to use the old message display format
 
+#### [`outTextForGroup`](https://wiki.hoggitworld.com/view/DCS_func_outTextForGroup)
+
+Displays the passed string of text for the specified time to all players.
+
+**Params:**
+- *name* (string) - the name of the group the text should be displayed for
+- *text* (string) - the message that should be displayed
+- *displayTime* (number) - the amount of seconds the message should be displayed
+- *clearView* (boolean) - defines whether or not to use the old message display format
+
 #### [`removeMark`](https://wiki.hoggitworld.com/view/DCS_func_removeMark)
 
 Removes a mark panel from the f10 map
@@ -40,6 +54,334 @@ Returns information about the given zone. Returns an object containing the zones
 
 **Params:**
 - *name* (string) - the name of the trigger zone
+
+#### `getZones`
+
+Returns a list of the names of all zones in the mission
+
+#### [`getUserFlag`](https://wiki.hoggitworld.com/view/DCS_func_getUserFlag)
+
+Returns the value of a user flag.
+
+**Params:**
+- *flag* (string) - the name/number of the flag
+
+#### [`setUserFlag`](https://wiki.hoggitworld.com/view/DCS_func_setUserFlag)
+
+Returns the value of a user flag.
+
+**Params:**
+- *flag* (string) - the name/number of the flag
+- *value* (number) - the new value for the flag
+
+### Group Methods
+
+#### [`getGroups`](https://wiki.hoggitworld.com/view/DCS_func_getGroups)
+
+Get a list of all group names of the given coalition and category.
+
+**Params:**
+- *coalition* (u8) - the coalition
+- [*category*] (u8) - the group category
+
+#### [`groupID`](https://wiki.hoggitworld.com/view/DCS_func_getID)
+
+Returns the group's id.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+
+Return a boolean value based on whether the group currently exists in the mission.
+
+**Params:**
+- *name* (string) - the name of the group
+
+### `groupData`
+
+Returns the group data as defined in the mission editor. Result might be null, if the group was added later (and thus not defined in the mission editor).
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupCoalition`](https://wiki.hoggitworld.com/view/DCS_func_getCoalition)
+
+Returns the group's coalition.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
+
+Returns the group's country.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupCategory`](https://wiki.hoggitworld.com/view/DCS_func_getCategory)
+
+Returns the group's category.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`addGroup`](https://wiki.hoggitworld.com/view/DCS_func_addGroup)
+
+Dynamically spawns a group of the specified category for the specified country. Group data table is in the same format as created by the mission editor. Returns the name of the newly created group.
+
+**Params:**
+- *country* (u8) - the group's country
+- *category* (u8) - the group's category
+- *data* (u8) - the group data (same format as created by the mission editor)
+
+#### [`groupActivate`](https://wiki.hoggitworld.com/view/DCS_func_activate)
+
+Activates the group if the group has a delayed start or late activation.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupUnits`](https://wiki.hoggitworld.com/view/DCS_func_getUnits)
+
+Get a list of all unit names that are part of the given group.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### `groupSmoke`
+
+Add a smoke marker to the group's position. Requires the group to have a "Embark to transport" task setup.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### `groupUnsmoke`
+
+Removes smoke markers from the group's position. Requires the group to have a "Embark to transport" task setup
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupDestroy`](https://wiki.hoggitworld.com/view/DCS_func_destroy)
+
+Destroy the group.
+
+**Params:**
+- *name* (string) - the name of the group
+
+#### [`groupSize`](https://wiki.hoggitworld.com/view/DCS_func_getSize
+
+Returns the size of the group.
+
+**Params:**
+- *name* (string) - the name of the group
+
+### Unit Methods
+
+#### [`unitExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+
+Returns whether the unit still exists in the mission.
+
+**Params:**
+- *name* (string) - the name of the unit
+-
+
+#### [`unitPosition`](https://wiki.hoggitworld.com/view/DCS_func_getPoint)
+
+Returns the unit's x, y, z position relative to the map's origin.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### `unitInfantryLoad`
+
+Command a group to embark a unit.
+
+**Params:**
+- load (object)
+    - *name* (string) - the name of the group to be loaded
+- into (object)
+    - *name* (string) - the name of the unit to load the group into
+
+#### `unitInfantryCapacity`
+
+Return how many infantry units a unit can load.
+
+**Params:**
+- *name* (string) - the name of the unit the capacity should be returned for
+
+#### `unitInfantryLoaded`
+
+Return how many infantry units a unit has already loaded.
+
+**Params:**
+- *name* (string) - the name of the unit the loaded count should be returned for
+
+#### `unitInfantryUnload`
+
+Command a group to embark a unit.
+
+**Params:**
+- unit (object)
+    - *name* (string) - the name of the unit the group should be unloaded from
+- unload (object)
+    - *name* (string) - the name of the group that should be unloaded
+
+#### `unitInfantrySmokeUnloadArea`
+
+Add a smoke marker to an unload area. This requires a "Disembarking" task being setup for the given unit and `group` to work.
+
+**Params:**
+- unit (object)
+    - *name* (string) - the name of the unit the group is loaded into
+- smokeFor (object)
+    - *name* (string) - the name of the group that should the smoke be placed for
+
+#### `unitLoadedGroups`
+
+Returns an array of group names of all the groups that are currently loaded into the provided unit.
+
+**Params:**
+- *name* (string) - the name of the unit we want to return the loaded group names for
+
+#### [`unitIsAirborne`](https://wiki.hoggitworld.com/view/DCS_func_inAir)
+
+Returns whether the unit is currently in the air or not.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitOrientation`](https://wiki.hoggitworld.com/view/DCS_func_getPosition)
+
+Returns the units current position and orientation in 3D space. x, y, z values are unit vectors defining the objects orientation.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitGroup`](https://wiki.hoggitworld.com/view/DCS_func_getGroup)
+
+Returns the group the unit is  part of.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitLife`](https://wiki.hoggitworld.com/view/DCS_func_getLife)
+
+Returns the current life of the unit.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitPlayerName`](https://wiki.hoggitworld.com/view/DCS_func_getPlayerName)
+
+Returns the name of the player that controls the unit (if it is controlled by a player).
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitCoalition`](https://wiki.hoggitworld.com/view/DCS_func_getCoalition)
+
+Returns the coalition of the unit.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
+
+Returns the country of the unit.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitCategory`](https://wiki.hoggitworld.com/view/DCS_func_getCategory)
+
+Return an enumerator of the category for the unit.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+#### [`unitDestroy`](https://wiki.hoggitworld.com/view/DCS_func_destroy)
+
+Destroys the unit.
+
+**Params:**
+- *name* (string) - the name of the unit
+
+### Airbase Methods
+
+#### [`airbaseExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+
+Returns whether the airbase still exists in the mission.
+
+**Params:**
+- *name* (string) - the name of the airbase
+
+#### [`airbasePosition`](https://wiki.hoggitworld.com/view/DCS_func_getPoint)
+
+Returns the airbase's x, y, z position relative to the map's origin.
+
+**Params:**
+- *name* (string) - the name of the airbase
+
+### Statics Methods
+
+#### [`addStatic`](https://wiki.hoggitworld.com/view/DCS_func_addStaticObject)
+
+Dynamically spawns a static of the specified country. Static data table is in the same format as created by the mission editor.
+
+**Params:**
+- *country* (u8) - the static's country
+- *data* (u8) - the static data (same format as created by the mission editor)
+
+#### [`staticID`](https://wiki.hoggitworld.com/view/DCS_func_getID)
+
+Returns the static's id.
+
+**Params:**
+- *name* (string) - the name of the static
+
+#### [`staticName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
+
+Returns the static's name.
+
+**Params:**
+- *id* (int) - the id of the static
+
+#### [`staticExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
+
+Return a boolean value based on whether the static currently exists in the mission.
+
+**Params:**
+- *name* (string) - the name of the static
+
+### `staticData`
+
+Returns the static data as defined in the mission editor. Result might be null, if the static was added later (and thus not defined in the mission editor).
+
+**Params:**
+- *name* (string) - the name of the static
+
+#### [`staticPosition`](https://wiki.hoggitworld.com/view/DCS_func_getPoint)
+
+Returns the static's x, y, z position relative to the map's origin.
+
+**Params:**
+- *name* (string) - the name of the static
+
+#### [`staticCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
+
+Returns the country of the static.
+
+**Params:**
+- *name* (string) - the name of the static
+
+#### [`staticDestroy`](https://wiki.hoggitworld.com/view/DCS_func_destroy)
+
+Destroys the static.
+
+**Params:**
+- *name* (string) - the name of the static
 
 ### Mission Command Methods
 
@@ -120,214 +462,6 @@ Removes the submenu (and its children) or command from the F10 menu for all play
 **Params:**
 - *coalition* (u8) - the coalition
 - [*path*] (table) - the path of the submenu that should be removed
-
-### Group Methods
-
-#### [`getGroups`](https://wiki.hoggitworld.com/view/DCS_func_getGroups)
-
-Get a list of all group names of the given coalition and category.
-
-**Params:**
-- *coalition* (u8) - the coalition
-- [*category*] (u8) - the group category
-
-#### [`groupID`](https://wiki.hoggitworld.com/view/DCS_func_getID)
-
-Returns the group's id.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### [`groupName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
-
-Returns the group's name.
-
-**Params:**
-- *id* (int) - the id of the group
-
-#### [`groupExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
-
-Return a boolean value based on whether the group currently exists in the mission.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### [`groupCoalition`](https://wiki.hoggitworld.com/view/DCS_func_getCoalition)
-
-Returns the group's coalition.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### [`groupCountry`](https://wiki.hoggitworld.com/view/DCS_func_getCountry)
-
-Returns the group's country.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### [`groupCategory`](https://wiki.hoggitworld.com/view/DCS_func_getCategory)
-
-Returns the group's category.
-
-**Params:**
-- *name* (string) - the name of the group
-
-### `groupData`
-
-Returns the group data as defined in the mission editor. Result might be null, if the group was added later (and thus not defined in the mission editor).
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### [`addGroup`](https://wiki.hoggitworld.com/view/DCS_func_addGroup)
-
-Dynamically spawns a group of the specified category for the specified country. Group data table is in the same format as created by the mission editor. Returns the name of the newly created group.
-
-**Params:**
-- *country* (u8) - the group's country
-- *category* (u8) - the group's category
-- *data* (u8) - the group data (same format as created by the mission editor)
-
-#### [`groupActivate`](https://wiki.hoggitworld.com/view/DCS_func_activate)
-
-Activates the group if the group has a delayed start or late activation.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### [`groupUnits`](https://wiki.hoggitworld.com/view/DCS_func_getUnits)
-
-Get a list of all unit names that are part of the given group.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### `groupSmoke`
-
-Add a smoke marker to the group's position. Requires the group to have a "Embark to transport" task setup.
-
-**Params:**
-- *name* (string) - the name of the group
-
-#### `groupUnsmoke`
-
-Removes smoke markers from the group's position. Requires the group to have a "Embark to transport" task setup
-
-**Params:**
-- *name* (string) - the name of the group
-
-### Unit Methods
-
-#### [`unitName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
-
-Returns the group's name.
-
-**Params:**
-- *id* (int) - the id of the group
-
-#### [`unitPosition`](https://wiki.hoggitworld.com/view/DCS_func_getPoint)
-
-Returns the unit's x, y, z position relative to the map's origin.
-
-**Params:**
-- *name* (string) - the name of the unit
-
-#### `unitInfantryLoad`
-
-Command a group to embark a unit.
-
-**Params:**
-- load (object)
-    - *name* (string) - the name of the group to be loaded
-- into (object)
-    - *name* (string) - the name of the unit to load the group into
-
-#### `unitInfantryCapacity`
-
-Return how many infantry units a unit can load.
-
-**Params:**
-- *name* (string) - the name of the unit the capacity should be returned for
-
-#### `unitInfantryLoaded`
-
-Return how many infantry units a unit has already loaded.
-
-**Params:**
-- *name* (string) - the name of the unit the loaded count should be returned for
-
-#### `unitInfantryUnload`
-
-Command a group to embark a unit.
-
-**Params:**
-- unit (object)
-    - *name* (string) - the name of the unit the group should be unloaded from
-- unload (object)
-    - *name* (string) - the name of the group that should be unloaded
-
-#### `unitInfantrySmokeUnloadArea`
-
-Add a smoke marker to an unload area. This requires a "Disembarking" task being setup for the given unit and `group` to work.
-
-**Params:**
-- unit (object)
-    - *name* (string) - the name of the unit the group is loaded into
-- smokeFor (object)
-    - *name* (string) - the name of the group that should the smoke be placed for
-
-#### `unitLoadedGroups`
-
-Returns an array of group names of all the groups that are currently loaded into the provided unit.
-
-**Params:**
-- *name* (string) - the name of the unit we want to return the loaded group names for
-
-#### [`unitIsAirborne`](https://wiki.hoggitworld.com/view/DCS_func_inAir)
-
-Returns whether the unit is currently in the air or not.
-
-**Params:**
-- *name* (string) - the name of the unit
-
-#### [`unitOrientation`](https://wiki.hoggitworld.com/view/DCS_func_getPosition)
-
-Returns the units current position and orientation in 3D space. x, y, z values are unit vectors defining the objects orientation.
-
-**Params:**
-- *name* (string) - the name of the unit
-
-### Statics Methods
-
-#### [`addStatic`](https://wiki.hoggitworld.com/view/DCS_func_addStaticObject)
-
-Dynamically spawns a static of the specified country. Static data table is in the same format as created by the mission editor.
-
-**Params:**
-- *country* (u8) - the static's country
-- *data* (u8) - the static data (same format as created by the mission editor)
-
-#### [`staticID`](https://wiki.hoggitworld.com/view/DCS_func_getID)
-
-Returns the static's id.
-
-**Params:**
-- *name* (string) - the name of the static
-
-#### [`staticName`](https://wiki.hoggitworld.com/view/DCS_func_getName)
-
-Returns the static's name.
-
-**Params:**
-- *id* (int) - the id of the static
-
-#### [`staticExists`](https://wiki.hoggitworld.com/view/DCS_func_isExist)
-
-Return a boolean value based on whether the static currently exists in the mission.
-
-**Params:**
-- *name* (string) - the name of the static
 
 ## Events
 
